@@ -1,0 +1,36 @@
+Questions for Teacher — StockPredictor Bachelor's Thesis
+========================================================
+
+ML / Prediction Core
+--------------------
+1. Prediction type: regression (predict exact price), classification (predict up/down), or both?
+2. Prediction horizon: daily, weekly, monthly, or multiple?
+3. Which ML models should I implement? (XGBoost is my current candidate — should I compare it with others like LSTM, Random Forest?)
+4. Which technical indicators should I use as features? (e.g., Moving Averages, RSI, MACD, Bollinger Bands — how many?)
+5. How much historical data should the model train on? (1 year, 5 years, etc.)
+6. Which model evaluation metrics should I report? (RMSE, MAE, accuracy, F1, etc.)
+7. Should I include sentiment analysis using FinBERT on financial news headlines as an additional feature?
+8. If yes to sentiment — which news data source? (NewsAPI, Alpha Vantage news, web scraping?)
+
+Data
+----
+9. What stock data sources are acceptable for the thesis? (I'm planning to use Yahoo Finance via yfinance)
+10. Should I focus on specific markets/exchanges? (US stocks only, or also BVB/European?)
+
+Frontend / Features
+-------------------
+11. How complex should the dashboard be? (simple watchlist + charts, or more advanced with portfolio tracking, alerts, etc.)
+12. Are there specific pages or features you expect to see?
+13. Should the app support dark mode or theming?
+14. Does the app need to be responsive / mobile-friendly?
+
+Thesis Document
+---------------
+15. Page count requirements? (minimum/maximum)
+16. Required structure? (specific chapters, mandatory sections)
+17. Citation style? (IEEE, APA, etc.)
+18. Language the thesis is written in? (Romanian, English?)
+
+Deployment / Demo
+-----------------
+19. Should the app be deployed somewhere accessible, or is a local Docker demo sufficient for the defense?

@@ -1,0 +1,58 @@
+# === WSL artifacts ===
+C:\\Users\\*
+
+# === .NET / Backend ===
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.claude/
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# === Node / Frontend ===
+node_modules/
+dist/
+.env
+CLAUDE.md
+.env.*
+!.env.example
+*.tsbuildinfo
+
+# === Python / ML ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+**/CLAUDE.md
+env/
+*.joblib
+*.pkl
+*.pt
+*.h5
+.ipynb_checkpoints/
+
+# === IDE ===
+.vs/
+.vscode/
+.idea/
+**/CLAUDE.MD
+*.swp
+*.swo
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Docker ===
+.docker/
+
+# === Logs ===
+*.log
+logs/
