@@ -1,0 +1,47 @@
+ML Learning Plan — StockPredictor Thesis
+==========================================
+
+Saptamana 1 — Fundamente
+
+- Supervised learning — ce este, cum functioneaza
+- Regression vs Classification — diferenta, cand folosesti care
+- Features vs Labels — ce bagi in model vs ce prezici
+- Overfitting vs Underfitting — cum arata, cum le detectezi
+- Bias-Variance tradeoff — doar conceptual, nu matematic
+- Train / Validation / Test split — de ce imparti datele, ratios tipice
+
+Saptamana 2 — Preprocessing & Time Series
+
+- Handling missing values — NaN-uri, cum le tratezi
+- Feature scaling — MinMaxScaler vs StandardScaler, cand conteaza
+- Lag features — folosesti pretul de ieri ca feature
+- Rolling windows — moving average pe N zile
+- Stationarity — de ce preturile brute sunt bad input, folosesti returns
+- Train/test split pentru time series — NU shufflezi, split cronologic
+- Walk-forward validation — validarea corecta pentru time series
+- Autocorrelation — cum valorile trecute influenteaza viitorul
+- Data leakage — ce este, cum apare accidental in time series, cum te asiguri ca nu calculezi features cu date din viitor
+
+Saptamana 3 — Models & Features
+
+- Decision Trees — baza pentru tot ce urmeaza, intelegi asta primul
+- Random Forest — ensemble de decision trees in paralel
+- Gradient Boosting — conceptual, ce inseamna "boosting"
+- XGBoost — cum difera de Random Forest, hyperparametri cheie (n_estimators, max_depth, learning_rate, subsample)
+- Hyperparameter tuning — GridSearchCV sau RandomizedSearchCV
+- Feature importance — XGBoost iti da asta automat, important pentru teza
+- Technical indicators — SMA, EMA, RSI, MACD, Bollinger Bands, OBV (ce captureaza fiecare, nu formulele)
+- Correlation analysis — verifica ca features nu sunt redundante (daca 3 indicators coreleaza 0.99, pastrezi doar unul)
+
+Saptamana 4 — Evaluare & Teza
+
+- MAE, RMSE, MAPE, R² — pentru regression
+- Accuracy, Precision, Recall, F1 — pentru classification
+- Confusion matrix — ce sunt TP/FP/TN/FN
+- Baseline model — "prezic pretul de ieri" = benchmark minim
+- Efficient Market Hypothesis & Random Walk — de ce stock prediction e greu, pentru sectiunea de limitari din teza
+
+If needed (daca prof-ul aproba)
+-------------------------------
+- LSTM basics — ce este un RNN, ce rezolva LSTM (memory gates), cum reformatezi datele (samples, timesteps, features)
+- FinBERT sentiment — cum se face text classification pe stiri financiare, cum integrezi scorul ca feature extra
