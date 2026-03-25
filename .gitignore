@@ -57,3 +57,4 @@ desktop.ini
 # === Logs ===
 *.log
 logs/
+notebooks/data/gdelt_sentiment_5y.parquet 
