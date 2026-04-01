@@ -56,27 +56,47 @@
 - **Key finding:** 100x more data (3,760 → 373K) barely improved F1 (+0.015). The bottleneck is features, not data volume. Technical indicators alone have limited predictive power for multi-class stock signal prediction.
 - Models saved to `src/ml/app/models/` (xgb_3m.joblib, xgb_6m.joblib, xgb_1y.joblib + metadata)
 
+### Step 6 — Sentiment Features via GDELT (`notebooks/06_sentiment_features.ipynb`)
+- **FinBERT/Finnhub abandoned:** Finnhub free tier only stores ~1 year of headlines (0 results for 2021-2024). FinBERT on Finnhub data achieved 0.9% coverage and hurt F1 (0.2502 → 0.2434).
+- **GDELT V2Tone chosen instead:** 66M records, 427/499 tickers covered, 84% coverage after merge. Free via BigQuery (1 TB/month free tier). Dictionary-based sentiment — no GPU needed.
+- **Matching approach:** GDELT V2Organizations uses `Name,CharOffset` format. Names extracted via regex, normalized (lowercase, strip Inc/Corp/Ltd) for fuzzy matching against Wikipedia company names.
+- **3 new features:** `sentiment_avg_20d` (rolling 20-day mean tone), `sentiment_volume_20d` (article count), `sentiment_momentum` (avg_20d minus avg_60d)
+- **Results (3m horizon, split 2025-09-01):**
+  | Model | F1 | Accuracy | MAE | Features |
+  |---|---|---|---|---|
+  | Technical only (Model A) | 0.2502 | 0.2508 | 1.3860 | 19 |
+  | Technical + GDELT (Model B) | **0.2612** | 0.2613 | 1.3651 | 22 |
+- **Statistical significance:** Bootstrap 95% CIs — Model A [0.2457, 0.2546] vs Model B [0.2568, 0.2655]. CIs don't overlap → improvement is statistically significant.
+- Sentiment feature rankings (out of 22): sentiment_volume_20d #6, sentiment_avg_20d #7, sentiment_momentum #12
+- Cache: `notebooks/data/gdelt_sentiment_5y.parquet` (164MB, 66M records)
+- **Model saved:** `src/ml/app/models/` — this is the production model
+
+### Step 7 — Model Optimization (`notebooks/07_model_optimization.ipynb`)
+- **Goal:** Improve on baseline F1=0.2612 / MAE=1.3651 via systematic optimization
+- **Features added:** sector one-hot (11), market-relative vs SPY (6), VIX/regime (3), sentiment lags (4), interaction terms (3), cross-sectional rank features (7) → 56 total
+- **Cross-sectional ranks:** For each date, percentile rank each stock's indicator among all S&P 500 peers. ATR_Pct_rank was 6th most important feature (3.0% gain).
+- **Optimization attempts and results:**
+  | Stage | F1 | MAE | Features |
+  |---|---|---|---|
+  | Baseline (22 feat, default params) | **0.2645** | **1.3515** | 22 |
+  | All new features, default params | 0.2416 | 1.4211 | 56 |
+  | Optuna 150 trials (56 features) | 0.2495 | 1.4629 | 56 |
+  | Feature selection (56→46) | 0.2558 | 1.4420 | 46 |
+  | Calibration + ordinal post-proc | 0.2311 | 1.5191 | 46 |
+  | Optuna 50 trials (22 features) | 0.2364 | 1.4543 | 22 |
+- **Conclusion: Default XGBoost params (n_estimators=200, max_depth=6, lr=0.1) beat every optimization attempt.** CV-based hyperparameter tuning degraded out-of-sample performance consistently — the late 2025 test period has different statistical properties from the 2022-2025 training folds. Optimization phase closed.
+- **Correlated features dropped:** Return_1m↔ROC (r=1.000), MACD_Norm↔MACD_Signal_Norm (r=0.954), sentiment_avg_20d↔sentiment_x_momentum (r=0.954)
+- **Survivorship bias noted** in both notebooks: training uses current S&P 500 constituents only — delisted/acquired companies excluded, performance estimates modestly inflated.
+
 ## Next Steps
 
-### Step 6 — Sentiment Features (FinBERT) — 3m horizon only
-- **Why 3m only:** Free news APIs provide ~1 year of history. With time-based split, only the 3m horizon has enough sentiment overlap in training (~6 months). 6m/1y horizons would have sentiment only in the test set — model can't learn from it.
-- **Plan:**
-  1. Fetch ~1 year of headlines for 500 stocks via Finnhub (free tier, 60 calls/min)
-  2. Run FinBERT to score sentiment per headline
-  3. Compute rolling sentiment features: avg score (20-day), news volume, sentiment momentum
-  4. Add to dataset: NaN for dates without news (years 1-4), real values for year 5
-  5. Re-split 3m data: train up to Sep 2025, test Sep-Dec 2025 (ensures sentiment in both)
-  6. Retrain XGBoost with 22 features (19 technical + 3 sentiment)
-  7. Compare with vs without sentiment
-- **Expected improvement:** F1 from ~0.26 to 0.30-0.35 range (sentiment adds forward-looking signal)
-- 6m/1y models remain technical-only — discuss data availability limitation in thesis
-
-### Step 7 — Port to FastAPI ML Service
+### Step 8 — Port to FastAPI ML Service
 - Move `compute_features()`, model loading, and prediction logic to `src/ml/app/`
-- Endpoints: `POST /predict`, `GET /health`, `GET /data/{ticker}`
-- At inference: fetch recent news via Finnhub → FinBERT → sentiment features (always available for live predictions)
+- Endpoints: `POST /predict`, `GET /health`, `GET /data/{ticker}`, `POST /train`
+- Production model: notebook 06 model_b (22 features, default params, F1=0.2612), already in `src/ml/app/models/`
+- At inference: query recent GDELT BigQuery → compute same rolling sentiment features → predict
 
-### Step 8 — Backend + Frontend Integration
+### Step 9 — Backend + Frontend Integration
 - .NET backend calls ML service for predictions
 - Frontend displays signal with confidence and feature breakdown
 - Hangfire background jobs for periodic data refresh

@@ -628,5 +628,188 @@
         "test_samples": 38918
       }
     }
+  },
+  "optimized_model": {
+    "horizon": "3m",
+    "feature_columns": [
+      "sector_Utilities",
+      "market_regime",
+      "spy_return_3m",
+      "sector_Consumer Staples",
+      "sector_Energy",
+      "ATR_Pct_rank",
+      "sector_Real Estate",
+      "sector_Financials",
+      "sector_Industrials",
+      "vix_change_20d",
+      "vix_level",
+      "spy_return_1m",
+      "sector_Information Technology",
+      "sector_Communication Services",
+      "ATR_Pct",
+      "sector_Consumer Discretionary",
+      "sector_Health Care",
+      "sector_Materials",
+      "sentiment_volume_20d",
+      "sentiment_avg_20d_lag_20d",
+      "Dist_52w_Low",
+      "Dist_52w_High",
+      "Price_SMA50_Ratio",
+      "Price_SMA200_Ratio",
+      "Return_3m",
+      "sentiment_avg_20d",
+      "Return_3m_rank",
+      "excess_return_3m",
+      "MACD_Signal_Norm",
+      "sentiment_avg_20d_lag_5d",
+      "relative_rsi",
+      "sentiment_x_volatility",
+      "sentiment_std_20d",
+      "sentiment_momentum",
+      "BB_Width",
+      "BB_Width_rank",
+      "sentiment_trend_20d",
+      "MACD_Hist_Norm",
+      "Return_1m_rank",
+      "RSI_rank",
+      "excess_return_1m",
+      "sentiment_x_trend",
+      "RSI",
+      "ROC",
+      "OBV_Norm",
+      "Price_EMA20_Ratio"
+    ],
+    "n_features": 46,
+    "split_date": "2025-09-01",
+    "best_params": {
+      "max_depth": 10,
+      "learning_rate": 0.07079518017148034,
+      "n_estimators": 127,
+      "min_child_weight": 4,
+      "subsample": 0.8109063849774787,
+      "colsample_bytree": 0.643606328649718,
+      "gamma": 0.27296395823904734,
+      "reg_alpha": 0.3785953630924427,
+      "reg_lambda": 0.005798306942232057
+    },
+    "use_class_weights": false,
+    "calibration_method": "isotonic",
+    "results": {
+      "baseline": {
+        "desc": "Baseline (tech + sentiment, default params)",
+        "n_features": 22,
+        "f1": 0.2645,
+        "acc": 0.2646,
+        "mae": 1.3515
+      },
+      "optimized": {
+        "desc": "+ feature selection",
+        "n_features": 46,
+        "f1": 0.2558,
+        "acc": 0.2752,
+        "mae": 1.442
+      },
+      "calibrated": {
+        "desc": "+ calibration (isotonic) + ordinal post-processing",
+        "n_features": 46,
+        "f1": 0.2311,
+        "mae": 1.5191
+      }
+    },
+    "optimization_stages": {
+      "1_baseline": {
+        "f1": 0.2645,
+        "mae": 1.3515,
+        "n_features": 22
+      },
+      "2_new_features": {
+        "f1": 0.2416,
+        "mae": 1.4211,
+        "n_features": 56
+      },
+      "3_optuna": {
+        "f1": 0.2495,
+        "mae": 1.4629,
+        "n_features": 56
+      },
+      "4_selected": {
+        "f1": 0.2558,
+        "mae": 1.442,
+        "n_features": 46
+      },
+      "5_calibrated": {
+        "f1": 0.2311,
+        "mae": 1.5191,
+        "n_features": 46
+      }
+    },
+    "feature_groups": {
+      "technical": [
+        "Price_SMA50_Ratio",
+        "Price_SMA200_Ratio",
+        "Price_EMA20_Ratio",
+        "MACD_Norm",
+        "MACD_Signal_Norm",
+        "MACD_Hist_Norm",
+        "RSI",
+        "Stoch_K",
+        "Stoch_D",
+        "ROC",
+        "BB_Position",
+        "BB_Width",
+        "ATR_Pct",
+        "OBV_Norm",
+        "Vol_SMA_Ratio",
+        "Dist_52w_High",
+        "Dist_52w_Low",
+        "Return_1m",
+        "Return_3m"
+      ],
+      "sentiment": [
+        "sentiment_avg_20d",
+        "sentiment_volume_20d",
+        "sentiment_momentum"
+      ],
+      "sector": [
+        "sector_Communication Services",
+        "sector_Consumer Discretionary",
+        "sector_Consumer Staples",
+        "sector_Energy",
+        "sector_Financials",
+        "sector_Health Care",
+        "sector_Industrials",
+        "sector_Information Technology",
+        "sector_Materials",
+        "sector_Real Estate",
+        "sector_Utilities"
+      ],
+      "market_relative": [
+        "excess_return_1m",
+        "excess_return_3m",
+        "relative_rsi",
+        "relative_volume",
+        "spy_return_1m",
+        "spy_return_3m"
+      ],
+      "vix_regime": [
+        "vix_level",
+        "vix_change_20d",
+        "market_regime"
+      ],
+      "sentiment_lag": [
+        "sentiment_avg_20d_lag_5d",
+        "sentiment_avg_20d_lag_20d",
+        "sentiment_trend_20d",
+        "sentiment_std_20d"
+      ],
+      "interaction": [
+        "sentiment_x_volatility",
+        "sentiment_x_momentum",
+        "sentiment_x_trend"
+      ]
+    },
+    "n_optuna_trials": 150,
+    "train_samples": 428713,
+    "test_samples": 38918
   }
 }
