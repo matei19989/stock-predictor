@@ -6,3 +6,8 @@ scikit-learn
 xgboost
 yfinance
 joblib
+google-cloud-bigquery
+db-dtypes
+pyarrow
+requests
+lxml
