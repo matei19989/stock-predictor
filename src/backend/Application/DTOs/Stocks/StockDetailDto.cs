@@ -2,9 +2,9 @@ namespace StockPredictor.Application.DTOs.Stocks;
 
 public class StockDetailDto
 {
-    public string Ticker { get; set; } = string.Empty;
-    public string? Name { get; set; }
-    public string? Sector { get; set; }
-    public DateTime LastUpdatedAt { get; set; }
-    public List<PricePointDto> Prices { get; set; } = [];
+    public string Ticker { get; init; } = string.Empty;
+    public string? Name { get; init; }
+    public string? Sector { get; init; }
+    public DateTime LastUpdatedAt { get; init; }
+    public List<PricePointDto> Prices { get; init; } = [];
 }
