@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPredictor.Application"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPredictor.Infrastructure", "Infrastructure\StockPredictor.Infrastructure.csproj", "{A2D6AFE7-AC9C-4B25-BE4A-44580A623BB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPredictor.Tests.Unit", "..\..\tests\backend\StockPredictor.Tests.Unit\StockPredictor.Tests.Unit.csproj", "{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,18 @@ Global
 		{A2D6AFE7-AC9C-4B25-BE4A-44580A623BB9}.Release|x64.Build.0 = Release|Any CPU
 		{A2D6AFE7-AC9C-4B25-BE4A-44580A623BB9}.Release|x86.ActiveCfg = Release|Any CPU
 		{A2D6AFE7-AC9C-4B25-BE4A-44580A623BB9}.Release|x86.Build.0 = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|x64.Build.0 = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Debug|x86.Build.0 = Debug|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|x64.ActiveCfg = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|x64.Build.0 = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|x86.ActiveCfg = Release|Any CPU
+		{E1F3C5A0-7B2D-4F9E-A8C6-3D5E7F9B1A2C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

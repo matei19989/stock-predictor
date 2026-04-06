@@ -7,9 +7,23 @@ services:
       - backend
 
   backend:
-    build: ./src/backend/API
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=Host=db;Database=stockpredictor;Username=admin;Password=dev_password
+      - Jwt__Key=${JWT_KEY}
+      - Jwt__Issuer=StockPredictor
+      - Jwt__Audience=StockPredictor
+      - Jwt__ExpiryDays=7
+      - MlService__BaseUrl=http://ml:8000
+      - Hangfire__RefreshCron=0 * * * *
+      - Cors__AllowedOrigins__0=http://localhost:3000
+      - Cors__AllowedOrigins__1=http://frontend:3000
     depends_on:
       - db
       - ml

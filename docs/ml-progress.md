@@ -88,15 +88,42 @@
 - **Correlated features dropped:** Return_1m↔ROC (r=1.000), MACD_Norm↔MACD_Signal_Norm (r=0.954), sentiment_avg_20d↔sentiment_x_momentum (r=0.954)
 - **Survivorship bias noted** in both notebooks: training uses current S&P 500 constituents only — delisted/acquired companies excluded, performance estimates modestly inflated.
 
+### Step 8 — FastAPI ML Service (`src/ml/app/`)
+- Ported notebook logic to production FastAPI service with 4 endpoints:
+  - `GET /health` — returns `{"status": "healthy", "model_loaded": true/false}`
+  - `GET /data/{ticker}?period=5y` — fetches OHLCV via yfinance, returns JSON
+  - `POST /predict` — full inference pipeline: yfinance → 19 technical features → GDELT BigQuery sentiment → XGBoost → signal
+  - `POST /train` — stub (returns 501, future work)
+- **Prediction pipeline:** fetch 1y OHLCV → `compute_features()` (19 indicators) → query GDELT for 90 days of sentiment → compute 3 rolling features → run XGBoost on 22-feature vector → return signal + confidence + per-class probabilities
+- **Model loading:** lifespan loads `xgb_3m_sentiment.joblib`, `label_encoder.joblib`, `training_metadata.json` on startup. If files missing, service starts but `/predict` returns 503
+- **Sentiment at inference:** queries `gdelt-bq.gdeltv2.gkg_partitioned` via BigQuery with same cleaning logic as training notebook. Graceful degradation — if BigQuery unavailable or no articles found, sentiment features become NaN (XGBoost handles natively)
+- **Ticker→company mapping:** fetched from Wikipedia S&P 500 table on startup, used to match tickers to GDELT organization names
+- **Horizons:** only `3m` supported (has trained model). `6m` and `1y` return 501
+- **Dependencies added:** google-cloud-bigquery, db-dtypes, pyarrow, requests, lxml
+- Service verified: starts cleanly, `/health` returns `model_loaded: true`
+
 ## Next Steps
 
-### Step 8 — Port to FastAPI ML Service
-- Move `compute_features()`, model loading, and prediction logic to `src/ml/app/`
-- Endpoints: `POST /predict`, `GET /health`, `GET /data/{ticker}`, `POST /train`
-- Production model: notebook 06 model_b (22 features, default params, F1=0.2612), already in `src/ml/app/models/`
-- At inference: query recent GDELT BigQuery → compute same rolling sentiment features → predict
-
 ### Step 9 — Backend + Frontend Integration
-- .NET backend calls ML service for predictions
+- .NET backend calls ML service for predictions and data fetching
 - Frontend displays signal with confidence and feature breakdown
-- Hangfire background jobs for periodic data refresh
+- Hangfire background jobs for periodic data refresh via `GET /data/{ticker}`
+
+## Backend Progress
+
+### Backend Tasks 1–3 Complete (2026-04-04)
+- NuGet packages added across all four projects (Domain, Application, Infrastructure, API)
+  - Key pins: `Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4`, `Microsoft.AspNetCore.Authentication.JwtBearer 9.0.4` (latest 10.x targets .NET 10 only)
+  - `Microsoft.AspNetCore.OpenApi` replaced by `Swashbuckle.AspNetCore`
+- Domain entities created: `User`, `Stock`, `StockPrice`, `WatchlistItem`, `Prediction`
+- Domain constants: `DefaultWatchlist` (AAPL, MSFT, GOOGL, AMZN, TSLA)
+- Solution builds: 0 errors, 0 warnings
+
+### Backend Tasks 4–7 Complete (2026-04-04)
+- Application exceptions: `AppException` base + `NotFoundException` (404), `ConflictException` (409), `UnauthorizedException` (401), `HorizonNotSupportedException` (501), `MlServiceUnavailableException` (503)
+- Application repository interfaces: `IUserRepository`, `IStockRepository`, `IStockPriceRepository`, `IWatchlistRepository`, `IPredictionRepository`
+- Application service interfaces: `IAuthService`, `IStockService`, `IWatchlistService`, `IPredictionService`
+- ML client contract: `IMlServiceClient` + `MlServiceModels` (records for health, stock data, predict response)
+- Application DTOs: Auth (RegisterRequest, LoginRequest, AuthResponse), Stocks (StockSearchResultDto, StockDetailDto, PricePointDto), Watchlist (AddToWatchlistRequest, WatchlistItemDto), Predictions (PredictRequest, PredictionDto)
+- Solution builds: 0 errors, 0 warnings
+- Next: Tasks 8–11 — validators, AppDbContext + EF configurations, repository implementations, MlServiceClient (`docs/superpowers/plans/2026-04-04-backend-tasks-8-11.md`)
