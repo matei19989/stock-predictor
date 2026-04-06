@@ -11,35 +11,36 @@ public class WatchlistRepository : IWatchlistRepository
 
     public WatchlistRepository(AppDbContext db) => _db = db;
 
-    public Task<List<WatchlistItem>> GetByUserIdAsync(Guid userId) =>
+    public Task<List<WatchlistItem>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _db.WatchlistItems
+           .AsNoTracking()
            .Include(w => w.Stock)
            .Where(w => w.UserId == userId)
            .OrderByDescending(w => w.AddedAt)
-           .ToListAsync();
+           .ToListAsync(cancellationToken);
 
-    public Task<WatchlistItem?> GetItemAsync(Guid userId, Guid stockId) =>
+    public Task<WatchlistItem?> GetItemAsync(Guid userId, Guid stockId, CancellationToken cancellationToken = default) =>
         _db.WatchlistItems
-           .FirstOrDefaultAsync(w => w.UserId == userId && w.StockId == stockId);
+           .FirstOrDefaultAsync(w => w.UserId == userId && w.StockId == stockId, cancellationToken);
 
-    public Task<bool> ExistsAsync(Guid userId, Guid stockId) =>
-        _db.WatchlistItems.AnyAsync(w => w.UserId == userId && w.StockId == stockId);
+    public Task<bool> ExistsAsync(Guid userId, Guid stockId, CancellationToken cancellationToken = default) =>
+        _db.WatchlistItems.AnyAsync(w => w.UserId == userId && w.StockId == stockId, cancellationToken);
 
-    public async Task AddAsync(WatchlistItem item)
+    public async Task AddAsync(WatchlistItem item, CancellationToken cancellationToken = default)
     {
-        await _db.WatchlistItems.AddAsync(item);
-        await _db.SaveChangesAsync();
+        await _db.WatchlistItems.AddAsync(item, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task RemoveAsync(WatchlistItem item)
+    public async Task RemoveAsync(WatchlistItem item, CancellationToken cancellationToken = default)
     {
         _db.WatchlistItems.Remove(item);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<List<string>> GetAllWatchedTickersAsync() =>
+    public Task<List<string>> GetAllWatchedTickersAsync(CancellationToken cancellationToken = default) =>
         _db.WatchlistItems
            .Select(w => w.Stock.Ticker)
            .Distinct()
-           .ToListAsync();
+           .ToListAsync(cancellationToken);
 }

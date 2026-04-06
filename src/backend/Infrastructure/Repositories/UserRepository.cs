@@ -11,21 +11,21 @@ public class UserRepository : IUserRepository
 
     public UserRepository(AppDbContext db) => _db = db;
 
-    public Task<User?> GetByIdAsync(Guid id) =>
-        _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-    public Task<User?> GetByEmailAsync(string email) =>
-        _db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLower());
+    public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
+        _db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLower(), cancellationToken);
 
-    public async Task AddAsync(User user)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        await _db.Users.AddAsync(user);
-        await _db.SaveChangesAsync();
+        await _db.Users.AddAsync(user, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<bool> EmailExistsAsync(string email) =>
-        _db.Users.AnyAsync(u => u.Email == email.ToLower());
+    public Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default) =>
+        _db.Users.AnyAsync(u => u.Email == email.ToLower(), cancellationToken);
 
-    public Task<bool> UsernameExistsAsync(string username) =>
-        _db.Users.AnyAsync(u => u.Username == username);
+    public Task<bool> UsernameExistsAsync(string username, CancellationToken cancellationToken = default) =>
+        _db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower(), cancellationToken);
 }

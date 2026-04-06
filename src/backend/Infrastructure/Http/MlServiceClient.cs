@@ -17,11 +17,11 @@ public class MlServiceClient : IMlServiceClient
         _logger = logger;
     }
 
-    public async Task<bool> IsHealthyAsync()
+    public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _http.GetFromJsonAsync<MlHealthResponse>("/health");
+            var response = await _http.GetFromJsonAsync<MlHealthResponse>("/health", cancellationToken);
             return response?.Status == "healthy";
         }
         catch (Exception ex)
@@ -31,9 +31,18 @@ public class MlServiceClient : IMlServiceClient
         }
     }
 
-    public async Task<MlStockDataResponse?> GetStockDataAsync(string ticker, string period = "5y")
+    public async Task<MlStockDataResponse?> GetStockDataAsync(string ticker, string period = "5y", CancellationToken cancellationToken = default)
     {
-        var response = await _http.GetAsync($"/data/{ticker}?period={period}");
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.GetAsync($"/data/{ticker}?period={period}", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "ML service unreachable when fetching data for {Ticker}", ticker);
+            throw new MlServiceUnavailableException();
+        }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
@@ -41,14 +50,30 @@ public class MlServiceClient : IMlServiceClient
             return null;
         }
 
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<MlStockDataResponse>();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("ML service returned {StatusCode} for {Ticker}",
+                (int)response.StatusCode, ticker);
+            throw new MlServiceUnavailableException();
+        }
+
+        return await response.Content.ReadFromJsonAsync<MlStockDataResponse>(cancellationToken: cancellationToken);
     }
 
-    public async Task<MlPredictResponse> PredictAsync(string ticker, string horizon)
+    public async Task<MlPredictResponse> PredictAsync(string ticker, string horizon, CancellationToken cancellationToken = default)
     {
         var body = new { ticker = ticker.ToUpper(), horizon };
-        var response = await _http.PostAsJsonAsync("/predict", body);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.PostAsJsonAsync("/predict", body, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "ML service unreachable for prediction {Ticker}/{Horizon}", ticker, horizon);
+            throw new MlServiceUnavailableException();
+        }
 
         if (response.StatusCode == HttpStatusCode.NotImplemented)
             throw new HorizonNotSupportedException(horizon);
@@ -56,8 +81,14 @@ public class MlServiceClient : IMlServiceClient
         if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
             throw new MlServiceUnavailableException("ML model is not ready. Try again shortly.");
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("ML service returned {StatusCode} for prediction {Ticker}/{Horizon}",
+                (int)response.StatusCode, ticker, horizon);
+            throw new MlServiceUnavailableException();
+        }
 
-        return (await response.Content.ReadFromJsonAsync<MlPredictResponse>())!;
+        return await response.Content.ReadFromJsonAsync<MlPredictResponse>(cancellationToken: cancellationToken)
+            ?? throw new MlServiceUnavailableException("ML service returned an unexpected response.");
     }
 }

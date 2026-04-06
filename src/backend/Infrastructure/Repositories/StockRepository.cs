@@ -11,28 +11,30 @@ public class StockRepository : IStockRepository
 
     public StockRepository(AppDbContext db) => _db = db;
 
-    public Task<Stock?> GetByTickerAsync(string ticker) =>
-        _db.Stocks.FirstOrDefaultAsync(s => s.Ticker == ticker.ToUpper());
+    public Task<Stock?> GetByTickerAsync(string ticker, CancellationToken cancellationToken = default) =>
+        _db.Stocks.FirstOrDefaultAsync(s => s.Ticker == ticker.ToUpper(), cancellationToken);
 
-    public Task<Stock?> GetByIdAsync(Guid id) =>
-        _db.Stocks.FirstOrDefaultAsync(s => s.Id == id);
+    public Task<Stock?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.Stocks.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
-    public Task<List<Stock>> SearchAsync(string query, int limit = 20) =>
+    public Task<List<Stock>> SearchAsync(string query, int limit = 20, CancellationToken cancellationToken = default) =>
         _db.Stocks
+           .AsNoTracking()
            .Where(s => EF.Functions.ILike(s.Ticker, $"%{query}%") ||
                        (s.Name != null && EF.Functions.ILike(s.Name, $"%{query}%")))
+           .OrderBy(s => s.Ticker)
            .Take(limit)
-           .ToListAsync();
+           .ToListAsync(cancellationToken);
 
-    public async Task AddAsync(Stock stock)
+    public async Task AddAsync(Stock stock, CancellationToken cancellationToken = default)
     {
-        await _db.Stocks.AddAsync(stock);
-        await _db.SaveChangesAsync();
+        await _db.Stocks.AddAsync(stock, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Stock stock)
+    public async Task UpdateAsync(Stock stock, CancellationToken cancellationToken = default)
     {
         _db.Stocks.Update(stock);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
     }
 }

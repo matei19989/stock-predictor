@@ -11,39 +11,77 @@ public class StockPriceRepository : IStockPriceRepository
 
     public StockPriceRepository(AppDbContext db) => _db = db;
 
-    public Task<StockPrice?> GetLatestAsync(Guid stockId) =>
+    public Task<StockPrice?> GetLatestAsync(Guid stockId, CancellationToken cancellationToken = default) =>
         _db.StockPrices
+           .AsNoTracking()
            .Where(p => p.StockId == stockId)
            .OrderByDescending(p => p.Date)
-           .FirstOrDefaultAsync();
+           .FirstOrDefaultAsync(cancellationToken);
 
-    public Task<List<StockPrice>> GetLastNAsync(Guid stockId, int count) =>
+    public Task<List<StockPrice>> GetLastNAsync(Guid stockId, int count, CancellationToken cancellationToken = default) =>
         _db.StockPrices
+           .AsNoTracking()
            .Where(p => p.StockId == stockId)
            .OrderByDescending(p => p.Date)
            .Take(count)
-           .ToListAsync();
+           .ToListAsync(cancellationToken);
 
-    public Task<List<StockPrice>> GetAllAsync(Guid stockId) =>
+    public Task<List<StockPrice>> GetAllAsync(Guid stockId, CancellationToken cancellationToken = default) =>
         _db.StockPrices
+           .AsNoTracking()
            .Where(p => p.StockId == stockId)
            .OrderBy(p => p.Date)
-           .ToListAsync();
+           .ToListAsync(cancellationToken);
 
-    public async Task<int> UpsertRangeAsync(Guid stockId, List<StockPrice> prices)
+    public async Task<int> UpsertRangeAsync(Guid stockId, List<StockPrice> prices, CancellationToken cancellationToken = default)
     {
         var incoming = prices.Select(p => p.Date).ToList();
 
         var existing = await _db.StockPrices
             .Where(p => p.StockId == stockId && incoming.Contains(p.Date))
             .Select(p => p.Date)
-            .ToHashSetAsync();
+            .ToHashSetAsync(cancellationToken);
 
         var newPrices = prices.Where(p => !existing.Contains(p.Date)).ToList();
         if (newPrices.Count == 0) return 0;
 
-        await _db.StockPrices.AddRangeAsync(newPrices);
-        await _db.SaveChangesAsync();
+        await _db.StockPrices.AddRangeAsync(newPrices, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
         return newPrices.Count;
+    }
+
+    public async Task<Dictionary<Guid, StockPrice>> GetLatestForStocksAsync(List<Guid> stockIds, CancellationToken cancellationToken = default)
+    {
+        if (stockIds.Count == 0) return new();
+
+        var cutoff = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        var prices = await _db.StockPrices
+            .AsNoTracking()
+            .Where(p => stockIds.Contains(p.StockId) && p.Date >= cutoff)
+            .OrderByDescending(p => p.Date)
+            .ToListAsync(cancellationToken);
+
+        return prices
+            .GroupBy(p => p.StockId)
+            .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    public async Task<Dictionary<Guid, List<StockPrice>>> GetLastNForStocksAsync(
+        List<Guid> stockIds, int countPerStock, CancellationToken cancellationToken = default)
+    {
+        if (stockIds.Count == 0) return new();
+
+        var cutoff = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        var prices = await _db.StockPrices
+            .AsNoTracking()
+            .Where(p => stockIds.Contains(p.StockId) && p.Date >= cutoff)
+            .OrderByDescending(p => p.Date)
+            .ToListAsync(cancellationToken);
+
+        return prices
+            .GroupBy(p => p.StockId)
+            .ToDictionary(g => g.Key, g => g.Take(countPerStock).ToList());
     }
 }
