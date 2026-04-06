@@ -6,6 +6,8 @@ news sentiment and computes rolling features for inference.
 
 import logging
 import re
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -14,17 +16,26 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 _bq_client = None
+_bq_lock = threading.Lock()
+
+# TTL cache for GDELT sentiment queries: {key: (DataFrame, timestamp)}
+_sentiment_cache: dict[str, tuple[pd.DataFrame | None, float]] = {}
+_sentiment_lock = threading.Lock()
+_SENTIMENT_TTL = 3600  # 1 hour
 
 
 def _get_bq_client():
     """Return a cached BigQuery client (created once, reused across requests)."""
     global _bq_client
-    if _bq_client is None:
-        try:
-            from google.cloud import bigquery
-            _bq_client = bigquery.Client()
-        except Exception:
-            return None
+    if _bq_client is not None:
+        return _bq_client
+    with _bq_lock:
+        if _bq_client is None:
+            try:
+                from google.cloud import bigquery
+                _bq_client = bigquery.Client()
+            except Exception:
+                return None
     return _bq_client
 
 
@@ -136,6 +147,15 @@ def fetch_sentiment(
     Returns:
         DataFrame with columns [date, sentiment] or None if query fails.
     """
+    cache_key = f"{ticker}:{days}"
+    with _sentiment_lock:
+        if cache_key in _sentiment_cache:
+            cached_df, ts = _sentiment_cache[cache_key]
+            if time.time() - ts < _SENTIMENT_TTL:
+                logger.info("Sentiment cache hit for %s", ticker)
+                return cached_df.copy() if cached_df is not None else None
+            del _sentiment_cache[cache_key]
+
     client = _get_bq_client()
     if client is None:
         logger.warning("BigQuery client unavailable — skipping sentiment for %s", ticker)
@@ -163,6 +183,8 @@ def fetch_sentiment(
 
     if result.empty:
         logger.info("No GDELT articles found for %s", ticker)
+        with _sentiment_lock:
+            _sentiment_cache[cache_key] = (None, time.time())
         return None
 
     # Parse article_date (YYYYMMDD string) to datetime
@@ -171,7 +193,11 @@ def fetch_sentiment(
     # Normalize tone to [-1, +1]
     result["sentiment"] = np.clip(result["tone"] / 10, -1, 1)
 
-    return result[["date", "sentiment"]]
+    out = result[["date", "sentiment"]]
+    with _sentiment_lock:
+        _sentiment_cache[cache_key] = (out.copy(), time.time())
+
+    return out
 
 
 def compute_sentiment_features(

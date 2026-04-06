@@ -38,15 +38,16 @@ def predict(request: Request, body: PredictRequest) -> PredictResponse:
             ticker_to_company=state.ticker_to_company,
         )
     except ValueError as e:
+        logger.warning("Data fetch failed for %s: %s", body.ticker, e)
         raise HTTPException(
             status_code=502,
-            detail={"error": "data_fetch_failed", "detail": str(e)},
+            detail={"error": "data_fetch_failed"},
         )
     except Exception as e:
         logger.error("Prediction failed for %s: %s", body.ticker, e, exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail={"error": "prediction_failed", "detail": str(e)},
+            detail={"error": "prediction_failed"},
         )
 
     return PredictResponse(**result)

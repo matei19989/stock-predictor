@@ -44,15 +44,11 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     avg_gain = gain.ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
     df["RSI"] = 100 - (100 / (1 + avg_gain / avg_loss))
-    # Guard: completely flat price (avg_gain=0, avg_loss=0) → 0/0 → NaN; default to neutral
-    df.loc[(avg_gain == 0) & (avg_loss == 0), "RSI"] = 50.0
 
     low_14 = df["Low"].rolling(14).min()
     high_14 = df["High"].rolling(14).max()
     stoch_range = high_14 - low_14
     df["Stoch_K"] = 100 * (df["Close"] - low_14) / stoch_range
-    # Guard: zero range (flat price for 14 days) → midpoint
-    df.loc[stoch_range == 0, "Stoch_K"] = 50.0
     df["Stoch_D"] = df["Stoch_K"].rolling(3).mean()
     df["ROC"] = df["Close"].pct_change(21) * 100
 
