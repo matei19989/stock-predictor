@@ -2,10 +2,10 @@ namespace StockPredictor.Application.DTOs.Stocks;
 
 public class PricePointDto
 {
-    public string Date { get; set; } = string.Empty;
-    public decimal Open { get; set; }
-    public decimal High { get; set; }
-    public decimal Low { get; set; }
-    public decimal Close { get; set; }
-    public long Volume { get; set; }
+    public string Date { get; init; } = string.Empty;
+    public decimal Open { get; init; }
+    public decimal High { get; init; }
+    public decimal Low { get; init; }
+    public decimal Close { get; init; }
+    public long Volume { get; init; }
 }

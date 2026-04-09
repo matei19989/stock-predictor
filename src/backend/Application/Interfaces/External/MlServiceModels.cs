@@ -11,7 +11,9 @@ public record MlStockDataResponse(
     string Ticker,
     string Period,
     int Count,
-    List<MlDataPoint> Data
+    List<MlDataPoint> Data,
+    string? Name = null,
+    string? Sector = null
 );
 
 public record MlDataPoint(
