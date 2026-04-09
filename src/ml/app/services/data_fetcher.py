@@ -14,6 +14,45 @@ _ohlcv_cache: dict[str, tuple[pd.DataFrame, float]] = {}
 _ohlcv_lock = threading.Lock()
 _OHLCV_TTL = 900  # 15 minutes
 
+_info_cache: dict[str, tuple[dict[str, str | None], float]] = {}
+_info_lock = threading.Lock()
+_INFO_TTL = 900  # 15 minutes
+
+
+def fetch_stock_info(ticker: str) -> dict[str, str | None]:
+    """Fetch stock name and sector via yfinance.
+
+    Args:
+        ticker: Stock ticker symbol (e.g. "AAPL").
+
+    Returns:
+        Dict with "name" and "sector" keys (values may be None).
+        Never raises — returns None values on any failure.
+    """
+    with _info_lock:
+        if ticker in _info_cache:
+            info, ts = _info_cache[ticker]
+            if time.time() - ts < _INFO_TTL:
+                logger.info("Info cache hit for %s", ticker)
+                return info
+            del _info_cache[ticker]
+
+    try:
+        stock = yf.Ticker(ticker)
+        raw = stock.info
+        result: dict[str, str | None] = {
+            "name": raw.get("shortName"),
+            "sector": raw.get("sector"),
+        }
+    except Exception:
+        logger.warning("Failed to fetch info for %s", ticker, exc_info=True)
+        result = {"name": None, "sector": None}
+
+    with _info_lock:
+        _info_cache[ticker] = (result, time.time())
+
+    return result
+
 
 def fetch_ohlcv(ticker: str, period: str = "5y") -> pd.DataFrame:
     """Fetch OHLCV data for a ticker using yfinance.
