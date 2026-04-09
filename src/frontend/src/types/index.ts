@@ -103,7 +103,7 @@ export interface ApiError {
 export interface JwtPayload {
   sub: string;
   email: string;
-  name: string;
+  unique_name: string;
   exp: number;
   iat: number;
 }
