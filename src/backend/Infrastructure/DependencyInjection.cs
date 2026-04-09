@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +43,10 @@ public static class DependencyInjection
         services.AddScoped<IWatchlistService, WatchlistService>();
         services.AddScoped<IPredictionService, PredictionService>();
 
+        // HTTP context accessor (needed by CorrelationIdHandler)
+        services.AddHttpContextAccessor();
+        services.AddTransient<CorrelationIdHandler>();
+
         // ML service client with resilience
         services.AddHttpClient<IMlServiceClient, MlServiceClient>(client =>
         {
@@ -50,6 +55,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(mlBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
         })
+        .AddHttpMessageHandler<CorrelationIdHandler>()
         .AddStandardResilienceHandler(options =>
         {
             options.Retry.MaxRetryAttempts = 3;
