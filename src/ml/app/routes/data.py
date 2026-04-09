@@ -6,7 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Path, Query
 
 from app.schemas.data import DataResponse, StockDataPoint
-from app.services.data_fetcher import fetch_ohlcv
+from app.services.data_fetcher import fetch_ohlcv, fetch_stock_info
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,8 @@ def get_stock_data(
             detail={"error": "data_fetch_failed"},
         )
 
+    info = fetch_stock_info(ticker.upper())
+
     data_points = [
         StockDataPoint(
             date=row.Index.strftime("%Y-%m-%d"),
@@ -49,6 +51,8 @@ def get_stock_data(
 
     return DataResponse(
         ticker=ticker.upper(),
+        name=info["name"],
+        sector=info["sector"],
         period=period,
         count=len(data_points),
         data=data_points,

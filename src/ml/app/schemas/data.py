@@ -16,6 +16,8 @@ class DataResponse(BaseModel):
     """Response body for GET /data/{ticker}."""
 
     ticker: str
+    name: str | None = None
+    sector: str | None = None
     period: str
     count: int
     data: list[StockDataPoint]
