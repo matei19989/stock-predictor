@@ -25,15 +25,34 @@ _SENTIMENT_TTL = 3600  # 1 hour
 
 
 def _get_bq_client():
-    """Return a cached BigQuery client (created once, reused across requests)."""
+    """Return a cached BigQuery client (created once, reused across requests).
+
+    Credential resolution order:
+    1. GCP_CREDENTIALS_JSON env var (base64-encoded service account JSON — safe for deployment)
+    2. GOOGLE_APPLICATION_CREDENTIALS env var (path to JSON file — local Docker)
+    3. Application Default Credentials (gcloud auth — local dev)
+    """
     global _bq_client
     if _bq_client is not None:
         return _bq_client
     with _bq_lock:
         if _bq_client is None:
             try:
+                import json
+                import os
+
                 from google.cloud import bigquery
-                _bq_client = bigquery.Client()
+
+                creds_json = os.environ.get("GCP_CREDENTIALS_JSON")
+                if creds_json:
+                    import base64
+                    from google.oauth2 import service_account
+                    info = json.loads(base64.b64decode(creds_json))
+                    credentials = service_account.Credentials.from_service_account_info(info)
+                    _bq_client = bigquery.Client(credentials=credentials, project=info["project_id"])
+                else:
+                    project = os.environ.get("GCP_PROJECT_ID")
+                    _bq_client = bigquery.Client(project=project) if project else bigquery.Client()
             except Exception:
                 return None
     return _bq_client

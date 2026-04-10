@@ -19,7 +19,6 @@
     "Dist_52w_Low",
     "Return_1m",
     "Return_3m"
-    
   ],
   "signal_labels": [
     "Strong Sell",
@@ -621,9 +620,9 @@
         "test_samples": 38918
       },
       "model_b_sentiment": {
-        "weighted_f1": 0.2612,
-        "accuracy": 0.2613,
-        "mae": 1.3651,
+        "weighted_f1": 0.2608,
+        "accuracy": 0.2609,
+        "mae": 1.3666,
         "n_features": 22,
         "train_samples": 428713,
         "test_samples": 38918

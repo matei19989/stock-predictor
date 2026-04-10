@@ -35,9 +35,13 @@ services:
     environment:
       # Optional: enables GDELT sentiment features. Without this,
       # predictions still work but sentiment features degrade to NaN.
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-service-account.json
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      # Option 1 (deployment): base64-encoded service account JSON
+      - GCP_CREDENTIALS_JSON=${GCP_CREDENTIALS_JSON:-}
+      # Option 2 (local Docker): mount ADC credentials from host
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/adc.json
     volumes:
-      - ./credentials:/app/credentials:ro
+      - ${APPDATA}/gcloud/application_default_credentials.json:/app/credentials/adc.json:ro
 
   db:
     image: postgres:16
