@@ -1,0 +1,25 @@
+name: Docker — Compose Build
+
+on:
+  push:
+    paths:
+      - 'docker-compose.yml'
+      - 'src/backend/Dockerfile'
+      - 'src/frontend/Dockerfile'
+      - 'src/ml/Dockerfile'
+  pull_request:
+    paths:
+      - 'docker-compose.yml'
+      - 'src/backend/Dockerfile'
+      - 'src/frontend/Dockerfile'
+      - 'src/ml/Dockerfile'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build all services
+        run: docker compose build
