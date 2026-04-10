@@ -54,6 +54,12 @@ desktop.ini
 # === Docker ===
 .docker/
 
+# === Credentials (GCP service accounts, etc.) ===
+credentials/
+
+# === Git Worktrees ===
+.worktrees/
+
 # === Logs ===
 *.log
 logs/

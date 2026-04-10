@@ -28,4 +28,10 @@ public class UserRepository : IUserRepository
 
     public Task<bool> UsernameExistsAsync(string username, CancellationToken cancellationToken = default) =>
         _db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower(), cancellationToken);
+
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _db.Users.Update(user);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -86,6 +86,20 @@ public class AuthService : IAuthService
         return new AuthResponse(token, user.Username, user.Email, expiry);
     }
 
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new UnauthorizedException("Current password is incorrect.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await _users.UpdateAsync(user, cancellationToken);
+
+        _logger.LogInformation("Password changed for user: {Username}", user.Username);
+    }
+
     private string GenerateToken(User user, DateTime expiry)
     {
         var jwtKey = _config["Jwt:Key"]
