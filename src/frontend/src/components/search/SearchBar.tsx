@@ -26,14 +26,10 @@ export default function SearchBar() {
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
-  // Reset active index when results change
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [results]);
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setQuery(e.target.value);
     setIsOpen(true);
+    setActiveIndex(-1);
   }
 
   function handleFocus() {

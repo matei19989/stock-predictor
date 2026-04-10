@@ -18,6 +18,11 @@ import type { WatchlistItem } from '@/types';
 type SortKey = keyof Pick<WatchlistItem, 'ticker' | 'name' | 'latestClose' | 'change1dPct' | 'signalConfidence'>;
 type SortDir = 'asc' | 'desc';
 
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return null;
+  return sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+}
+
 interface WatchlistTableProps {
   items: WatchlistItem[];
   onRemove: (ticker: string) => Promise<void>;
@@ -38,11 +43,6 @@ export default function WatchlistTable({ items, onRemove, isLoading }: Watchlist
       setSortKey(key);
       setSortDir('asc');
     }
-  }
-
-  function SortIcon({ col }: { col: SortKey }) {
-    if (col !== sortKey) return null;
-    return sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
   }
 
   const sorted = [...items].sort((a, b) => {
@@ -90,7 +90,7 @@ export default function WatchlistTable({ items, onRemove, isLoading }: Watchlist
                 aria-label={`Sort by ${label}`}
               >
                 <span className="flex items-center gap-1">
-                  {label} <SortIcon col={key} />
+                  {label} <SortIcon col={key} sortKey={sortKey} sortDir={sortDir} />
                 </span>
               </TableHead>
             ))}
@@ -101,7 +101,7 @@ export default function WatchlistTable({ items, onRemove, isLoading }: Watchlist
               aria-label="Sort by Confidence"
             >
               <span className="flex items-center gap-1">
-                Confidence <SortIcon col="signalConfidence" />
+                Confidence <SortIcon col="signalConfidence" sortKey={sortKey} sortDir={sortDir} />
               </span>
             </TableHead>
             <TableHead />

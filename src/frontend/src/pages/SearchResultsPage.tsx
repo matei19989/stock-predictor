@@ -12,24 +12,32 @@ export default function SearchResultsPage() {
   const query = searchParams.get('q') ?? '';
   useDocumentTitle(query ? `Search: ${query}` : 'Search');
   const [results, setResults] = useState<StockSearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!!query.trim());
   const [error, setError] = useState<string | null>(null);
+  const [prevQuery, setPrevQuery] = useState(query);
 
-  useEffect(() => {
-    if (!query.trim()) {
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    if (query.trim()) {
+      setIsLoading(true);
+      setError(null);
+    } else {
       setResults([]);
       setError(null);
       setIsLoading(false);
-      return;
     }
+  }
 
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    if (!query.trim()) return;
+
+    let cancelled = false;
     stockService
       .search(query.trim())
-      .then(setResults)
-      .catch(() => setError('Failed to load search results. Please try again.'))
-      .finally(() => setIsLoading(false));
+      .then((data) => { if (!cancelled) setResults(data); })
+      .catch(() => { if (!cancelled) setError('Failed to load search results. Please try again.'); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
   }, [query]);
 
   return (

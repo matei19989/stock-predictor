@@ -13,6 +13,11 @@ import type { WatchlistItem } from '@/types';
 type SortKey = 'ticker' | 'signalConfidence';
 type SortDir = 'asc' | 'desc';
 
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return null;
+  return sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+}
+
 interface PredictionTableProps {
   items: WatchlistItem[];
   onRequestPrediction: (ticker: string) => Promise<void>;
@@ -37,11 +42,6 @@ export default function PredictionTable({
     }
   }
 
-  function SortIcon({ col }: { col: SortKey }) {
-    if (col !== sortKey) return null;
-    return sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
-  }
-
   const sorted = [...items].sort((a, b) => {
     const aVal = a[sortKey] ?? '';
     const bVal = b[sortKey] ?? '';
@@ -59,7 +59,7 @@ export default function PredictionTable({
             onClick={() => handleSort('ticker')}
           >
             <span className="flex items-center gap-1">
-              Ticker <SortIcon col="ticker" />
+              Ticker <SortIcon col="ticker" sortKey={sortKey} sortDir={sortDir} />
             </span>
           </TableHead>
           <TableHead>Name</TableHead>
@@ -69,7 +69,7 @@ export default function PredictionTable({
             onClick={() => handleSort('signalConfidence')}
           >
             <span className="flex items-center gap-1">
-              Confidence <SortIcon col="signalConfidence" />
+              Confidence <SortIcon col="signalConfidence" sortKey={sortKey} sortDir={sortDir} />
             </span>
           </TableHead>
           <TableHead>Status</TableHead>

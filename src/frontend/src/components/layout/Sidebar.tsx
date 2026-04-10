@@ -12,12 +12,13 @@ export default function Sidebar() {
   const { isOpen, toggle, close } = useSidebar();
   const { items, isLoading } = useWatchlist();
   const location = useLocation();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia('(max-width: 1023px)').matches,
+  );
 
-  // Track viewport width
+  // Track viewport width changes
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 1023px)');
-    setIsMobile(mql.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
