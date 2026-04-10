@@ -44,7 +44,7 @@ public class RefreshStockPricesJob
         {
             try
             {
-                var data = await _ml.GetStockDataAsync(ticker, "5d", cancellationToken);
+                var data = await _ml.GetStockDataAsync(ticker, "1mo", cancellationToken);
                 if (data == null)
                 {
                     _logger.LogWarning("No data returned for {Ticker}", ticker);
