@@ -63,4 +63,6 @@ credentials/
 # === Logs ===
 *.log
 logs/
-notebooks/data/gdelt_sentiment_5y.parquet 
+notebooks/data/gdelt_sentiment_5y.parquet
+notebooks/data/df_3m_with_sentiment.parquet
+notebooks/data/optuna_purged_cv.db
