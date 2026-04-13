@@ -7,6 +7,7 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public string? PreferencesJson { get; set; }
 
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = [];
     public ICollection<StockVisit> StockVisits { get; set; } = [];
