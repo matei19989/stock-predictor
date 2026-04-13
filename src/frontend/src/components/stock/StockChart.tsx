@@ -27,7 +27,10 @@ function computeCutoffDate(range: Range): string {
 export default function StockChart({ prices, isLoading }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
-  const [range, setRange] = useState<Range>('1Y');
+  const [range, setRange] = useState<Range>(() => {
+    const saved = localStorage.getItem('sp_default_range');
+    return RANGES.includes(saved as Range) ? (saved as Range) : '1Y';
+  });
 
   // Build chart once with ALL data
   useEffect(() => {

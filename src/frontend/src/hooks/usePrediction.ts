@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
+import { notifySuccess } from '@/utils/notify';
 import * as predictionService from '@/services/predictionService';
 import { ApiException } from '@/services/api';
 import type { Prediction, Horizon } from '@/types';
@@ -44,7 +44,7 @@ export function usePrediction(): UsePredictionReturn {
     try {
       const data = await predictionService.create({ ticker, horizon });
       setPrediction(data);
-      toast.success('Prediction generated');
+      notifySuccess('Prediction generated');
     } catch (err) {
       if (err instanceof ApiException) {
         if (err.status === 503) setError('Prediction service temporarily unavailable');
