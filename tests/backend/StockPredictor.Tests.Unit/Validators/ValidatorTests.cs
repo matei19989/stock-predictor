@@ -175,7 +175,7 @@ public class LoginRequestValidatorTests
     [Fact]
     public void ValidEmailAndPassword_Passes()
     {
-        var model = new LoginRequest { Email = "user@example.com", Password = "password123" };
+        var model = new LoginRequest { Email = "user@example.com", Password = "password123", TurnstileToken = "test-token" };
         var result = _validator.TestValidate(model);
         result.ShouldNotHaveAnyValidationErrors();
     }
