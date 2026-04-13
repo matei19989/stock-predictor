@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import * as predictionService from '@/services/predictionService';
 import { ApiException } from '@/services/api';
 import PredictionTable from '@/components/predictions/PredictionTable';

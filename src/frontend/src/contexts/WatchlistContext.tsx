@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as watchlistService from '@/services/watchlistService';
 import type { WatchlistItem } from '@/types';
@@ -13,7 +13,7 @@ interface WatchlistContextValue {
   refetch: () => Promise<void>;
 }
 
-const WatchlistContext = createContext<WatchlistContextValue | null>(null);
+export const WatchlistContext = createContext<WatchlistContextValue | null>(null);
 
 export function WatchlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WatchlistItem[]>([]);
@@ -68,10 +68,4 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
       {children}
     </WatchlistContext>
   );
-}
-
-export function useWatchlist() {
-  const ctx = useContext(WatchlistContext);
-  if (!ctx) throw new Error('useWatchlist must be used within WatchlistProvider');
-  return ctx;
 }

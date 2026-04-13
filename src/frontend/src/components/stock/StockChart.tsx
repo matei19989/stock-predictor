@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries, type Range, type Time } from 'lightweight-charts';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PricePoint } from '@/types';
 
@@ -106,7 +106,7 @@ export default function StockChart({ prices, isLoading }: StockChartProps) {
     if (!chart || prices.length === 0) return;
     const from = computeCutoffDate(r);
     const to = prices[prices.length - 1].date;
-    chart.timeScale().setVisibleRange({ from, to } as any);
+    chart.timeScale().setVisibleRange({ from, to } as Range<Time>);
   }, [prices]);
 
   useEffect(() => {

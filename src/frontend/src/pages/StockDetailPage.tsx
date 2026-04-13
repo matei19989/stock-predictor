@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router';
 import * as stockService from '@/services/stockService';
 import { ApiException } from '@/services/api';
 import { usePrediction } from '@/hooks/usePrediction';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import StockHeader from '@/components/stock/StockHeader';
 import StockChart from '@/components/stock/StockChart';
@@ -59,7 +59,7 @@ export default function StockDetailPage() {
 
     void load();
     void fetchPrediction(ticker);
-  }, [ticker, fetchPrediction]);
+  }, [ticker, fetchPrediction, addRecentlyViewed]);
 
   async function handleToggleWatchlist() {
     if (!ticker) return;

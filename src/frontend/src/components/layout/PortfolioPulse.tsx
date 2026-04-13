@@ -1,5 +1,5 @@
 import { TrendUp, TrendDown } from '@phosphor-icons/react';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import { formatPct } from '@/utils/formatters';
 import type { WatchlistItem } from '@/types';
 

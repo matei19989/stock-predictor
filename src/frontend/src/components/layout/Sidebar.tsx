@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router';
 import { ChartLine, ChartBar, Gear, SquaresFour } from '@phosphor-icons/react';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/utils/cn';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import SignalBadge from '@/components/common/SignalBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -74,7 +74,7 @@ export default function Sidebar() {
       isDragging.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      try { localStorage.setItem(DIVIDER_STORAGE_KEY, String(watchlistHeight)); } catch {}
+      try { localStorage.setItem(DIVIDER_STORAGE_KEY, String(watchlistHeight)); } catch { /* ignore */ }
     }
 
     window.addEventListener('mousemove', handleMouseMove);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Check } from '@phosphor-icons/react';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import { formatPrice } from '@/utils/formatters';
 import type { StockSearchResult } from '@/types';
 

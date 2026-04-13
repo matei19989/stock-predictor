@@ -6,32 +6,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { StockOverview } from '@/types';
 
+const CACHE_KEY = 'sp_all_stocks';
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function readCache(): StockOverview[] | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts < CACHE_TTL && data.length > 0) return data;
+    }
+  } catch { /* ignore corrupt cache */ }
+  return null;
+}
+
 export default function AllStocksPage() {
   useDocumentTitle('All Stocks');
-  const [stocks, setStocks] = useState<StockOverview[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cached = readCache();
+  const [stocks, setStocks] = useState<StockOverview[]>(cached ?? []);
+  const [isLoading, setIsLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sector, setSector] = useState('All');
 
   useEffect(() => {
-    const CACHE_KEY = 'sp_all_stocks';
-    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    if (stocks.length > 0) return; // already have cached data
 
-    // Return cached data if fresh — no API call at all
-    try {
-      const raw = sessionStorage.getItem(CACHE_KEY);
-      if (raw) {
-        const { data, ts } = JSON.parse(raw);
-        if (Date.now() - ts < CACHE_TTL && data.length > 0) {
-          setStocks(data);
-          setIsLoading(false);
-          return; // cache is fresh, skip API entirely
-        }
-      }
-    } catch { /* ignore corrupt cache */ }
-
-    // Cache miss or stale — fetch from API
     stockService.getAll()
       .then(data => {
         setStocks(data);
@@ -39,7 +39,7 @@ export default function AllStocksPage() {
       })
       .catch(() => setError('Failed to load stocks'))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [stocks.length]);
 
   const sectors = useMemo(() => {
     const set = new Set(stocks.map(s => s.sector).filter(Boolean) as string[]);

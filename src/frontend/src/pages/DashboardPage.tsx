@@ -1,4 +1,4 @@
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import SummaryCards from '@/components/dashboard/SummaryCards';
 import WatchlistTable from '@/components/dashboard/WatchlistTable';
 import MarketOverview from '@/components/dashboard/MarketOverview';

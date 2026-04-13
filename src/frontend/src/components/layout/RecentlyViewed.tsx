@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import SignalBadge from '@/components/common/SignalBadge';
 import { cn } from '@/utils/cn';
 
