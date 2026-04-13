@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { ApiException } from '@/services/api';
 import { changePassword } from '@/services/authService';
+import { getPreferences, updatePreferences } from '@/services/preferencesService';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { usePredictionLog } from '@/hooks/usePredictionLog';
 
@@ -58,7 +59,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { items } = useWatchlist();
 
-  // Preferences (stored in localStorage for now)
+  // Preferences
   const [notifications, setNotifications] = useState(() => {
     try { return localStorage.getItem('sp_notifications') !== 'false'; } catch { return true; }
   });
@@ -66,17 +67,44 @@ export default function SettingsPage() {
     try { return localStorage.getItem('sp_default_range') ?? '1Y'; } catch { return '1Y'; }
   });
 
-  function toggleNotifications() {
-    const next = !notifications;
+  useEffect(() => {
+    getPreferences()
+      .then((prefs) => {
+        setNotifications(prefs.notificationsEnabled);
+        localStorage.setItem('sp_notifications', String(prefs.notificationsEnabled));
+        setDefaultRange(prefs.defaultChartRange);
+        localStorage.setItem('sp_default_range', prefs.defaultChartRange);
+      })
+      .catch(() => { /* localStorage defaults used as fallback */ });
+  }, []);
+
+  async function toggleNotifications() {
+    const prev = notifications;
+    const next = !prev;
     setNotifications(next);
     localStorage.setItem('sp_notifications', String(next));
-    toast.success(next ? 'Notifications enabled' : 'Notifications disabled');
+    try {
+      await updatePreferences({ notificationsEnabled: next, defaultChartRange: defaultRange });
+      toast.success(next ? 'Notifications enabled' : 'Notifications disabled');
+    } catch {
+      setNotifications(prev);
+      localStorage.setItem('sp_notifications', String(prev));
+      toast.error('Failed to update preference');
+    }
   }
 
-  function changeDefaultRange(range: string) {
+  async function changeDefaultRange(range: string) {
+    const prev = defaultRange;
     setDefaultRange(range);
     localStorage.setItem('sp_default_range', range);
-    toast.success(`Default chart range set to ${range}`);
+    try {
+      await updatePreferences({ notificationsEnabled: notifications, defaultChartRange: range });
+      toast.success(`Default chart range set to ${range}`);
+    } catch {
+      setDefaultRange(prev);
+      localStorage.setItem('sp_default_range', prev);
+      toast.error('Failed to update preference');
+    }
   }
 
   const {

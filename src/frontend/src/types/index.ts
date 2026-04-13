@@ -96,6 +96,13 @@ export interface Prediction {
 export type TradingSignal = 'Strong Sell' | 'Sell' | 'Hold' | 'Buy' | 'Strong Buy';
 export type Horizon = '3m' | '6m' | '1y';
 
+// === Preferences ===
+
+export interface UserPreferences {
+  defaultChartRange: string;
+  notificationsEnabled: boolean;
+}
+
 // === Error (RFC 7807 ProblemDetails) ===
 
 export interface ApiError {

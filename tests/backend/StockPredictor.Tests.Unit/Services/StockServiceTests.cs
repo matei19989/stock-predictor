@@ -193,6 +193,8 @@ public class StockServiceTests
         var stockId = Guid.NewGuid();
         _stocks.Setup(s => s.GetByTickerAsync("AAPL", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Stock { Id = stockId, Ticker = "AAPL" });
+        _prices.Setup(p => p.GetLatestAsync(stockId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StockPrice { Id = Guid.NewGuid(), StockId = stockId, Date = new DateOnly(2024, 1, 1), Close = 150m });
 
         var result = await _sut.EnsureStockExistsAsync("AAPL");
 

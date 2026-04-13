@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IStockService, StockService>();
         services.AddScoped<IWatchlistService, WatchlistService>();
         services.AddScoped<IPredictionService, PredictionService>();
+        services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 
         // HTTP context accessor (needed by CorrelationIdHandler)
         services.AddHttpContextAccessor();
