@@ -10,9 +10,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import joblib
+import xgboost as xgb
 from fastapi import FastAPI
 
-from app.routes import data, health, predict, train
+from app.routes import data, health, names, predict, train
 from app.services.sentiment import _build_ticker_mapping
 
 logging.basicConfig(
@@ -29,12 +30,14 @@ async def lifespan(app: FastAPI):
     """Load model artifacts on startup, clean up on shutdown."""
     app.state.model_loaded = False
     app.state.model = None
+    app.state.model_type = "sklearn"
     app.state.label_encoder = None
     app.state.feature_columns = []
     app.state.training_metadata = {}
     app.state.ticker_to_company = {}
 
-    model_path = MODELS_DIR / "xgb_3m_sentiment.joblib"
+    model_path = MODELS_DIR / "xgb_3m_blended.json"
+    model_path_fallback = MODELS_DIR / "xgb_3m_sentiment.joblib"
     encoder_path = MODELS_DIR / "label_encoder.joblib"
     metadata_path = MODELS_DIR / "training_metadata.json"
 
@@ -46,9 +49,19 @@ async def lifespan(app: FastAPI):
         app.state.feature_columns = metadata["sentiment_model"]["feature_columns"]
         logger.info("Loaded training metadata: %d features", len(app.state.feature_columns))
 
-        # Load model and encoder
-        app.state.model = joblib.load(model_path)
-        logger.info("Loaded XGBoost model from %s", model_path)
+        # Load model — prefer blended ordinal model, fall back to sklearn model
+        if model_path.exists():
+            booster = xgb.Booster()
+            booster.load_model(str(model_path))
+            app.state.model = booster
+            app.state.model_type = "booster"
+            logger.info("Loaded blended ordinal XGBoost model from %s", model_path)
+        elif model_path_fallback.exists():
+            app.state.model = joblib.load(model_path_fallback)
+            app.state.model_type = "sklearn"
+            logger.info("Loaded sklearn XGBoost model from %s (fallback)", model_path_fallback)
+        else:
+            raise FileNotFoundError(f"No model found at {model_path} or {model_path_fallback}")
 
         app.state.label_encoder = joblib.load(encoder_path)
         logger.info("Loaded label encoder: %s", list(app.state.label_encoder.classes_))
@@ -80,5 +93,6 @@ app = FastAPI(
 
 app.include_router(health.router)
 app.include_router(data.router)
+app.include_router(names.router)
 app.include_router(predict.router)
 app.include_router(train.router)

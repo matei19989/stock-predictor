@@ -36,6 +36,7 @@ def predict(request: Request, body: PredictRequest) -> PredictResponse:
             label_encoder=state.label_encoder,
             feature_columns=state.feature_columns,
             ticker_to_company=state.ticker_to_company,
+            model_type=getattr(state, "model_type", "sklearn"),
         )
     except ValueError as e:
         logger.warning("Data fetch failed for %s: %s", body.ticker, e)
