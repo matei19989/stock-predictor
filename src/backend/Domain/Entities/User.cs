@@ -9,4 +9,6 @@ public class User
     public DateTime CreatedAt { get; set; }
 
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = [];
+    public ICollection<StockVisit> StockVisits { get; set; } = [];
+    public ICollection<UserPredictionLog> PredictionLogs { get; set; } = [];
 }

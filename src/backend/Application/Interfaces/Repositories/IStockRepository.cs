@@ -9,4 +9,6 @@ public interface IStockRepository
     Task<List<Stock>> SearchAsync(string query, int limit = 20, CancellationToken cancellationToken = default);
     Task AddAsync(Stock stock, CancellationToken cancellationToken = default);
     Task UpdateAsync(Stock stock, CancellationToken cancellationToken = default);
+    Task<List<Stock>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddRangeAsync(List<Stock> stocks, CancellationToken cancellationToken = default);
 }

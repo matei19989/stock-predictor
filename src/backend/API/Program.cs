@@ -15,6 +15,7 @@ using StockPredictor.Infrastructure;
 using StockPredictor.Infrastructure.Jobs;
 using StockPredictor.Infrastructure.Persistence;
 using StockPredictor.Infrastructure.Seeding;
+using StockPredictor.Application.Settings;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -33,6 +34,7 @@ try
 
     // Infrastructure (DB, repos, services, ML client, Hangfire)
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.Configure<TurnstileSettings>(builder.Configuration.GetSection("Turnstile"));
 
     // Controllers + FluentValidation
     builder.Services.AddControllers();

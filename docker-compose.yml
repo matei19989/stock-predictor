@@ -1,6 +1,9 @@
 services:
   frontend:
-    build: ./src/frontend
+    build:
+      context: ./src/frontend
+      args:
+        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
     ports:
       - "3000:3000"
     depends_on:
@@ -24,6 +27,7 @@ services:
       - Hangfire__RefreshCron=0 * * * *
       - Cors__AllowedOrigins__0=http://localhost:3000
       - Cors__AllowedOrigins__1=http://frontend:3000
+      - Turnstile__SecretKey=${TURNSTILE_SECRET_KEY}
     depends_on:
       - db
       - ml
@@ -44,7 +48,7 @@ services:
       - ${APPDATA}/gcloud/application_default_credentials.json:/app/credentials/adc.json:ro
 
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     ports:
       - "5432:5432"
     environment:

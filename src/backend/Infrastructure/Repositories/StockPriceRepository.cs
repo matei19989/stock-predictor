@@ -18,14 +18,6 @@ public class StockPriceRepository : IStockPriceRepository
            .OrderByDescending(p => p.Date)
            .FirstOrDefaultAsync(cancellationToken);
 
-    public Task<List<StockPrice>> GetLastNAsync(Guid stockId, int count, CancellationToken cancellationToken = default) =>
-        _db.StockPrices
-           .AsNoTracking()
-           .Where(p => p.StockId == stockId)
-           .OrderByDescending(p => p.Date)
-           .Take(count)
-           .ToListAsync(cancellationToken);
-
     public Task<List<StockPrice>> GetAllAsync(Guid stockId, CancellationToken cancellationToken = default) =>
         _db.StockPrices
            .AsNoTracking()

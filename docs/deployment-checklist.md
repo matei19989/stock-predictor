@@ -15,6 +15,7 @@ Everything you need to enable each feature locally and in production.
 | Stock Data (yfinance) | Internet | Works out of the box | Works out of the box | Works out of the box |
 | Predictions (XGBoost) | `.joblib` model files | Train via notebook 07 | Copy into `src/ml/app/models/` | Include in Docker image |
 | GDELT Sentiment | BigQuery access | `gcloud auth application-default login` | Mount ADC or set `GCP_CREDENTIALS_JSON` | Workload Identity Federation |
+| Turnstile (bot protection) | Cloudflare account | Test keys in `.env` | `TURNSTILE_*` in `.env` | Azure App Settings |
 
 ---
 
@@ -213,6 +214,46 @@ az webapp config appsettings set --name <app> --resource-group <rg> \
 
 ---
 
+## 8. Cloudflare Turnstile (Bot Protection)
+
+Protects login and register endpoints from bots. Uses managed mode with `interaction-only` appearance.
+
+### Cloudflare Setup (one-time)
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Turnstile → Add Site
+2. Add your domain(s): `localhost` for dev, production domain for deployment
+3. Widget type: **Managed**
+4. Copy the **Site Key** (frontend) and **Secret Key** (backend)
+
+> **Production:** If your `localhost` keys are already created, you can add your production domain to the same Turnstile site — the same keys will work for both. No code changes needed.
+
+### Local Dev
+Frontend: set your site key in `src/frontend/.env`:
+```
+VITE_TURNSTILE_SITE_KEY=<your-site-key>
+```
+
+Backend: set your secret key in `appsettings.Development.json` under the `Turnstile` section.
+
+> **Tip:** For CI or offline dev without a Cloudflare account, you can use Cloudflare's always-pass test keys instead: site key `1x00000000000000000000AA`, secret key `1x0000000000000000000000000000000AA`.
+
+### Docker
+Set real keys in `.env` at repo root:
+```
+TURNSTILE_SITE_KEY=<your-site-key>
+TURNSTILE_SECRET_KEY=<your-secret-key>
+```
+These are injected via `docker-compose.yml` — frontend as a build arg, backend as an env var.
+
+### Azure Deployment
+Set as Azure App Settings:
+```bash
+az webapp config appsettings set --name <backend-app> --resource-group <rg> \
+  --settings Turnstile__SecretKey="<your-secret-key>"
+```
+For the frontend (static build), set `VITE_TURNSTILE_SITE_KEY` as a build-time variable in your CI/CD pipeline.
+
+---
+
 ## Environment Variables Summary
 
 ### `.env` file (local Docker — gitignored)
@@ -220,6 +261,8 @@ az webapp config appsettings set --name <app> --resource-group <rg> \
 JWT_KEY=<random-secret-min-32-chars>
 GCP_PROJECT_ID=stock-predictor-491310
 GCP_CREDENTIALS_JSON=<base64-encoded-service-account-json>  # optional
+TURNSTILE_SITE_KEY=<your-cloudflare-site-key>
+TURNSTILE_SECRET_KEY=<your-cloudflare-secret-key>
 ```
 
 ### Azure App Settings (production)
@@ -232,6 +275,8 @@ GCP_CREDENTIALS_JSON=<base64-encoded-service-account-json>  # optional
 | `GCP_PROJECT_ID` | ML | No | GCP project for BigQuery billing |
 | `GCP_CREDENTIALS_JSON` | ML | No | Base64 service account JSON (if not using WIF) |
 | `ASPNETCORE_ENVIRONMENT` | Backend | No | Set to `Production` |
+| `TURNSTILE_SITE_KEY` | Frontend | Yes | Cloudflare Turnstile site key (build-time) |
+| `Turnstile__SecretKey` | Backend | Yes | Cloudflare Turnstile secret key |
 
 ---
 

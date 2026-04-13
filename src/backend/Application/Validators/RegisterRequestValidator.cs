@@ -21,5 +21,6 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .NotEmpty()
             .MinimumLength(8)
             .WithMessage("Password must be at least 8 characters.");
+        RuleFor(x => x.TurnstileToken).NotEmpty().WithMessage("Bot verification is required.");
     }
 }

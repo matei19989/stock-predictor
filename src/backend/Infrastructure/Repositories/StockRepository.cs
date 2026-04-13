@@ -37,4 +37,13 @@ public class StockRepository : IStockRepository
         _db.Stocks.Update(stock);
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<List<Stock>> GetAllAsync(CancellationToken cancellationToken = default)
+        => await _db.Stocks.OrderBy(s => s.Ticker).ToListAsync(cancellationToken);
+
+    public async Task AddRangeAsync(List<Stock> stocks, CancellationToken cancellationToken = default)
+    {
+        _db.Stocks.AddRange(stocks);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
 }

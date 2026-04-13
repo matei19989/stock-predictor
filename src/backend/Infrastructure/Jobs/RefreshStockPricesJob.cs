@@ -59,6 +59,16 @@ public class RefreshStockPricesJob
                 totalInserted += inserted;
 
                 stock.LastUpdatedAt = DateTime.UtcNow;
+                // Backfill name/sector if missing
+                if (string.IsNullOrEmpty(stock.Name) && !string.IsNullOrEmpty(data.Name))
+                {
+                    stock.Name = data.Name;
+                    _logger.LogInformation("Backfilled name for {Ticker}: {Name}", ticker, data.Name);
+                }
+                if (string.IsNullOrEmpty(stock.Sector) && !string.IsNullOrEmpty(data.Sector))
+                {
+                    stock.Sector = data.Sector;
+                }
                 await _stocks.UpdateAsync(stock, cancellationToken);
             }
             catch (Exception ex)
