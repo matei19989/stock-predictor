@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { WatchlistContext } from '@/contexts/WatchlistContext';
+import { WatchlistContext } from '@/contexts/watchlistContextValue';
 
 export function useWatchlist() {
   const ctx = useContext(WatchlistContext);

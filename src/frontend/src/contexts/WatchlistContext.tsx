@@ -1,19 +1,9 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as watchlistService from '@/services/watchlistService';
 import type { WatchlistItem } from '@/types';
 import type { ReactNode } from 'react';
-
-interface WatchlistContextValue {
-  items: WatchlistItem[];
-  isLoading: boolean;
-  error: string | null;
-  add: (ticker: string) => Promise<void>;
-  remove: (ticker: string) => Promise<void>;
-  refetch: () => Promise<void>;
-}
-
-export const WatchlistContext = createContext<WatchlistContextValue | null>(null);
+import { WatchlistContext } from './watchlistContextValue';
 
 export function WatchlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WatchlistItem[]>([]);
