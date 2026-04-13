@@ -127,6 +127,7 @@ class TestRunPrediction:
             model=mock_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},  # empty mapping
+            model_type="sklearn",
         )
 
         # Should succeed — sentiment is NaN but XGBoost handles it
