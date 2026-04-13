@@ -15,7 +15,7 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, turnstileToken: string) => Promise<void>;
+  login: (email: string, password: string, turnstileToken: string, rememberMe?: boolean) => Promise<void>;
   register: (username: string, email: string, password: string, turnstileToken: string) => Promise<void>;
   logout: () => void;
   /** Called by login/register after a successful API response. */
@@ -25,23 +25,25 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function restoreSession(): { token: string | null; user: User | null } {
-  const stored = localStorage.getItem(TOKEN_KEY);
+  // Check localStorage first (remember me), then sessionStorage (session-only)
+  const storage = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+  const stored = storage.getItem(TOKEN_KEY);
   if (!stored) return { token: null, user: null };
 
   const payload = decodeJwtPayload(stored);
   if (!payload || isTokenExpired(payload)) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    storage.removeItem(TOKEN_KEY);
+    storage.removeItem(USER_KEY);
     return { token: null, user: null };
   }
 
-  const userJson = localStorage.getItem(USER_KEY);
+  const userJson = storage.getItem(USER_KEY);
   if (userJson) {
     try {
       return { token: stored, user: JSON.parse(userJson) as User };
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      storage.removeItem(TOKEN_KEY);
+      storage.removeItem(USER_KEY);
       return { token: null, user: null };
     }
   }
@@ -53,16 +55,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]   = useState<User | null>(() => restoreSession().user);
   const [token, setToken] = useState<string | null>(() => restoreSession().token);
 
-  const setAuthFromResponse = useCallback((response: AuthResponse) => {
-    localStorage.setItem(TOKEN_KEY, response.token);
-    localStorage.setItem(USER_KEY, JSON.stringify({ username: response.username, email: response.email }));
+  const setAuthFromResponse = useCallback((response: AuthResponse, rememberMe = false) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(TOKEN_KEY, response.token);
+    storage.setItem(USER_KEY, JSON.stringify({ username: response.username, email: response.email }));
     setToken(response.token);
     setUser({ username: response.username, email: response.email });
   }, []);
 
-  const login = useCallback(async (email: string, password: string, turnstileToken: string): Promise<void> => {
+  const login = useCallback(async (email: string, password: string, turnstileToken: string, rememberMe = false): Promise<void> => {
     const response = await authService.login(email, password, turnstileToken);
-    setAuthFromResponse(response);
+    setAuthFromResponse(response, rememberMe);
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get('returnTo') ?? '/dashboard';
     navigate(returnTo, { replace: true });
@@ -71,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (username: string, email: string, password: string, turnstileToken: string): Promise<void> => {
       const response = await authService.register(username, email, password, turnstileToken);
-      setAuthFromResponse(response);
+      setAuthFromResponse(response, true);
       navigate('/dashboard', { replace: true });
     },
     [navigate, setAuthFromResponse]
@@ -80,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
     navigate('/');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { notifySuccess } from '@/utils/notify';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import * as predictionService from '@/services/predictionService';
 import { ApiException } from '@/services/api';
@@ -18,7 +19,7 @@ export default function PredictionsPage() {
     setRequestingTicker(ticker);
     try {
       await predictionService.create({ ticker, horizon: '3m' });
-      toast.success(`Prediction generated for ${ticker}`);
+      notifySuccess(`Prediction generated for ${ticker}`);
       await refetch();
     } catch (err) {
       if (err instanceof ApiException) {

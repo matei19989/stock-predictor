@@ -6,7 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
-  HeroStagger, ScrollReveal, StaggerReveal, ScaleReveal,
+  HeroStagger, ScrollReveal, StaggerReveal,
   MotionCard, MotionLift, PulsingDot,
 } from '@/components/landing/animations';
 import TorusKnotScene from '@/components/landing/TorusKnotScene';
@@ -243,8 +243,8 @@ export default function LandingPage() {
         <div className="absolute left-1/3 top-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-teal-500/[0.05] rounded-full blur-[160px] pointer-events-none" />
         <div className="absolute right-1/4 top-1/3 w-[350px] h-[350px] bg-purple-600/[0.06] rounded-full blur-[140px] pointer-events-none" />
 
-        <ScaleReveal className="relative z-10 max-w-3xl mx-auto">
-          <div className="text-center rounded-3xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-12 sm:p-16 space-y-8">
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <div className="text-center rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm p-12 sm:p-16 space-y-8">
             <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.04em] leading-tight">
               Ready to see the signal?
             </h2>
@@ -261,7 +261,7 @@ export default function LandingPage() {
               </Button>
             </MotionLift>
           </div>
-        </ScaleReveal>
+        </div>
       </section>
 
       </div>{/* end chart background wrapper */}

@@ -33,7 +33,7 @@ const api = axios.create({
 // Attach JWT on every request.
 // Reads from localStorage at call time — never captures the value in a closure.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -47,6 +47,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(USER_KEY);
       window.location.href = '/login';
       return Promise.reject(
         new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })

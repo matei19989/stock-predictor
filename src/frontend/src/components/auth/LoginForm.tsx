@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,6 +20,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
   const { login } = useAuth();
+  const [rememberMe, setRememberMe] = useState(false);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const { token: turnstileToken, isReady, resetTurnstile } = useTurnstile(turnstileRef, 'login');
   const {
@@ -31,7 +32,7 @@ export default function LoginForm() {
   async function onSubmit(data: LoginFormData) {
     if (!turnstileToken) return;
     try {
-      await login(data.email, data.password, turnstileToken);
+      await login(data.email, data.password, turnstileToken, rememberMe);
     } catch (err) {
       if (err instanceof ApiException) {
         if (err.status === 401) toast.error('Invalid email or password');
@@ -82,6 +83,8 @@ export default function LoginForm() {
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
             className="h-4 w-4 rounded border border-white/10 bg-white/[0.04] accent-purple-500 cursor-pointer"
           />
           <span className="text-sm text-gray-400">Remember me</span>

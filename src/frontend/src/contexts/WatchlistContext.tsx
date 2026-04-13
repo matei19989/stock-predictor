@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { notifySuccess } from '@/utils/notify';
 import * as watchlistService from '@/services/watchlistService';
 import type { WatchlistItem } from '@/types';
 import type { ReactNode } from 'react';
@@ -30,7 +31,7 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
   const add = useCallback(async (ticker: string) => {
     try {
       await watchlistService.add(ticker);
-      toast.success(`${ticker} added to watchlist`);
+      notifySuccess(`${ticker} added to watchlist`);
       await fetchItems();
     } catch {
       toast.error(`Failed to add ${ticker}`);
@@ -46,7 +47,7 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
 
     try {
       await watchlistService.remove(ticker);
-      toast.success(`${ticker} removed from watchlist`);
+      notifySuccess(`${ticker} removed from watchlist`);
     } catch {
       setItems(snapshot);
       toast.error(`Failed to remove ${ticker}`);
