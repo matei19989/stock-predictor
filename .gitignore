@@ -63,4 +63,5 @@ credentials/
 # === Logs ===
 *.log
 logs/
-notebooks/data/gdelt_sentiment_5y.parquet 
+*.parquet
+*.db
