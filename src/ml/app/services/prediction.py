@@ -1,6 +1,8 @@
 """Prediction service — runs XGBoost inference pipeline.
 
 Orchestrates: data fetch → feature engineering → sentiment → model inference.
+Uses a blended ordinal-softmax loss model (native XGBoost Booster) that
+respects the ordinal structure of trading signals (Strong Sell → Strong Buy).
 """
 
 import logging
@@ -8,6 +10,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 
 from app.services.data_fetcher import fetch_ohlcv
 from app.services.feature_engineering import compute_features
@@ -25,6 +28,13 @@ SENTIMENT_FEATURES = ["sentiment_avg_20d", "sentiment_volume_20d", "sentiment_mo
 LOW_CONFIDENCE_THRESHOLD = 0.30
 
 
+def _softmax(raw: np.ndarray) -> np.ndarray:
+    """Apply softmax to raw model output margins."""
+    shifted = raw - raw.max(axis=1, keepdims=True)
+    exp_vals = np.exp(shifted)
+    return exp_vals / exp_vals.sum(axis=1, keepdims=True)
+
+
 def run_prediction(
     ticker: str,
     horizon: str,
@@ -32,16 +42,18 @@ def run_prediction(
     label_encoder: object,
     feature_columns: list[str],
     ticker_to_company: dict[str, str],
+    model_type: str = "booster",
 ) -> dict:
     """Run the full prediction pipeline for a single ticker.
 
     Args:
         ticker: Stock ticker symbol.
         horizon: Prediction horizon ("3m", "6m", "1y").
-        model: Loaded XGBoost model.
+        model: Loaded XGBoost model (Booster or XGBClassifier).
         label_encoder: Loaded LabelEncoder for signal names.
         feature_columns: Ordered list of feature column names the model expects.
         ticker_to_company: Mapping from ticker to cleaned company name.
+        model_type: "booster" for native XGBoost, "sklearn" for XGBClassifier.
 
     Returns:
         Dict with signal, confidence, probabilities, features_used, timestamp.
@@ -61,7 +73,15 @@ def run_prediction(
     latest = df.iloc[[-1]]
     X = latest[feature_columns].values
 
-    proba = model.predict_proba(X)[0]
+    if model_type == "booster":
+        dmatrix = xgb.DMatrix(X, feature_names=feature_columns)
+        raw = model.predict(dmatrix, output_margin=True)
+        n_classes = len(label_encoder.classes_)
+        raw = raw.reshape(-1, n_classes)
+        proba = _softmax(raw)[0]
+    else:
+        proba = model.predict_proba(X)[0]
+
     predicted_class = int(np.argmax(proba))
     signal = label_encoder.inverse_transform([predicted_class])[0]
     confidence = float(proba[predicted_class])
