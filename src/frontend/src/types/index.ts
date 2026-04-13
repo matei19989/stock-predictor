@@ -36,6 +36,16 @@ export interface StockDetail {
   prices: PricePoint[];
 }
 
+export interface StockOverview {
+  ticker: string;
+  name: string | null;
+  sector: string | null;
+  latestClose: number | null;
+  change1dPct: number | null;
+  latestSignal: TradingSignal | null;
+  signalConfidence: number | null;
+}
+
 export interface PricePoint {
   date: string;   // "yyyy-MM-dd"
   open: number;

@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPrice, formatVolume } from '@/utils/formatters';
 import type { PricePoint } from '@/types';
 
@@ -21,20 +20,24 @@ export default function PriceSummary({ prices }: PriceSummaryProps) {
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">Price Summary</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-3 gap-4">
-          {stats.map(({ label, value }) => (
-            <div key={label}>
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-lg font-semibold tabular-nums">{value}</p>
-            </div>
-          ))}
+    <div className="rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06]">
+      <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.03] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="px-6 pt-6 pb-2 border-b border-white/[0.06]">
+          <span className="text-[11px] uppercase tracking-[0.15em] font-medium text-gray-500">
+            Price Summary
+          </span>
         </div>
-      </CardContent>
-    </Card>
+        <div className="px-6 py-6">
+          <div className="grid grid-cols-3 gap-4">
+            {stats.map(({ label, value }) => (
+              <div key={label} className="space-y-1">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-gray-500">{label}</p>
+                <p className="font-heading text-xl font-bold tracking-[-0.03em] tabular-nums">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

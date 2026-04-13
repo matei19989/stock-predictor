@@ -10,6 +10,7 @@ import StockDetailPage from '@/pages/StockDetailPage';
 import SearchResultsPage from '@/pages/SearchResultsPage';
 import PredictionsPage from '@/pages/PredictionsPage';
 import SettingsPage from '@/pages/SettingsPage';
+import AllStocksPage from '@/pages/AllStocksPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/stocks" element={<AllStocksPage />} />
           <Route path="/stocks/:ticker" element={<StockDetailPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/predictions" element={<PredictionsPage />} />

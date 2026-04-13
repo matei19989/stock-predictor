@@ -1,6 +1,5 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
-import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
-import { Button } from '@/components/ui/button';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries, type IRange, type Time } from 'lightweight-charts';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PricePoint } from '@/types';
 
@@ -13,42 +12,43 @@ interface StockChartProps {
   isLoading: boolean;
 }
 
-function filterByRange(prices: PricePoint[], range: Range): PricePoint[] {
+function computeCutoffDate(range: Range): string {
   const now = new Date();
-  const cutoff = new Date();
   switch (range) {
-    case '1M': cutoff.setMonth(now.getMonth() - 1); break;
-    case '3M': cutoff.setMonth(now.getMonth() - 3); break;
-    case '6M': cutoff.setMonth(now.getMonth() - 6); break;
-    case '1Y': cutoff.setFullYear(now.getFullYear() - 1); break;
-    case '5Y': cutoff.setFullYear(now.getFullYear() - 5); break;
+    case '1M': now.setMonth(now.getMonth() - 1); break;
+    case '3M': now.setMonth(now.getMonth() - 3); break;
+    case '6M': now.setMonth(now.getMonth() - 6); break;
+    case '1Y': now.setFullYear(now.getFullYear() - 1); break;
+    case '5Y': now.setFullYear(now.getFullYear() - 5); break;
   }
-  return prices.filter(p => new Date(p.date) >= cutoff);
+  return now.toISOString().slice(0, 10);
 }
 
 export default function StockChart({ prices, isLoading }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const [range, setRange] = useState<Range>('1Y');
 
-  const filtered = useMemo(() => filterByRange(prices, range), [prices, range]);
-
+  // Build chart once with ALL data
   useEffect(() => {
-    if (!containerRef.current || filtered.length === 0) return;
+    if (!containerRef.current || prices.length === 0) return;
 
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
       height: 400,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#64748b',
+        textColor: '#4b5563',
       },
       grid: {
-        vertLines: { color: '#e2e8f0' },
-        horzLines: { color: '#e2e8f0' },
+        vertLines: { color: 'rgba(255,255,255,0.03)' },
+        horzLines: { color: 'rgba(255,255,255,0.03)' },
       },
-      timeScale: { borderColor: '#e2e8f0' },
-      rightPriceScale: { borderColor: '#e2e8f0' },
+      timeScale: { borderColor: 'rgba(255,255,255,0.06)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.06)' },
     });
+
+    chartRef.current = chart;
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
@@ -60,7 +60,7 @@ export default function StockChart({ prices, isLoading }: StockChartProps) {
     });
 
     candlestickSeries.setData(
-      filtered.map(p => ({
+      prices.map(p => ({
         time: p.date,
         open: Number(p.open),
         high: Number(p.high),
@@ -80,14 +80,12 @@ export default function StockChart({ prices, isLoading }: StockChartProps) {
     });
 
     volumeSeries.setData(
-      filtered.map(p => ({
+      prices.map(p => ({
         time: p.date,
         value: Number(p.volume),
-        color: Number(p.close) >= Number(p.open) ? '#22c55e40' : '#ef444440',
+        color: Number(p.close) >= Number(p.open) ? '#22c55e30' : '#ef444430',
       }))
     );
-
-    chart.timeScale().fitContent();
 
     const ro = new ResizeObserver(entries => {
       const { width } = entries[0].contentRect;
@@ -98,36 +96,57 @@ export default function StockChart({ prices, isLoading }: StockChartProps) {
     return () => {
       ro.disconnect();
       chart.remove();
+      chartRef.current = null;
     };
-  }, [filtered]);
+  }, [prices]);
+
+  // Set visible range when range button changes
+  const applyRange = useCallback((r: Range) => {
+    const chart = chartRef.current;
+    if (!chart || prices.length === 0) return;
+    const from = computeCutoffDate(r);
+    const to = prices[prices.length - 1].date;
+    chart.timeScale().setVisibleRange({ from, to } as IRange<Time>);
+  }, [prices]);
+
+  useEffect(() => {
+    applyRange(range);
+  }, [range, applyRange]);
 
   if (isLoading) {
-    return <Skeleton className="h-[400px] w-full" />;
+    return <Skeleton className="h-[400px] w-full rounded-2xl bg-white/[0.04]" />;
   }
 
   if (prices.length === 0) {
     return (
-      <div className="flex h-[400px] w-full items-center justify-center text-muted-foreground">
+      <div className="flex h-[400px] w-full items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02] text-gray-600">
         No price data available
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex gap-1">
         {RANGES.map(r => (
-          <Button
+          <button
             key={r}
-            variant={range === r ? 'default' : 'ghost'}
-            size="sm"
             onClick={() => setRange(r)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              range === r
+                ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
+                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
+            }`}
           >
             {r}
-          </Button>
+          </button>
         ))}
       </div>
-      <div ref={containerRef} className="h-[400px] w-full" />
+      <div className="rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06]">
+        <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.02] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] p-2">
+          <div ref={containerRef} className="h-[400px] w-full" />
+        </div>
+      </div>
     </div>
   );
 }
