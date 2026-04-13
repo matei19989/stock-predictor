@@ -1,0 +1,98 @@
+{
+  "baseline": {
+    "f1": 0.2611448698895509,
+    "acc": 0.26090754920602294,
+    "mae": 1.3681843876869315,
+    "desc": "nb06 reproduction (22 feat, default params)"
+  },
+  "boundary_filtered": {
+    "f1": 0.2591188197635834,
+    "acc": 0.26910427051749836,
+    "mae": 1.4120458399712215,
+    "desc": "- boundary samples (\u00c2\u00b11.0%)"
+  },
+  "boundary_filtered_wide": {
+    "f1": 0.24345906333246428,
+    "acc": 0.267022971375713,
+    "mae": 1.4583740171642943,
+    "desc": "- boundary samples (\u00c2\u00b11.5%)"
+  },
+  "recency_365d": {
+    "f1": 0.25957555268273186,
+    "acc": 0.25918598078010174,
+    "mae": 1.3634051081761653,
+    "desc": "+ recency weighting (half-life 365d)"
+  },
+  "recency_730d": {
+    "f1": 0.2567614638194296,
+    "acc": 0.257027596484917,
+    "mae": 1.3657947479315484,
+    "desc": "+ recency weighting (half-life 730d)"
+  },
+  "blended_a0.1": {
+    "f1": 0.2615499874403406,
+    "acc": 0.2890436301968241,
+    "mae": 1.395883652808469,
+    "desc": "Blended ordinal a=0.1"
+  },
+  "blended_a0.2": {
+    "f1": 0.2615523379070546,
+    "acc": 0.28760470733336757,
+    "mae": 1.3616321496479777,
+    "desc": "Blended ordinal a=0.2"
+  },
+  "blended_a0.3": {
+    "f1": 0.2689927994198721,
+    "acc": 0.29438820083251965,
+    "mae": 1.3037155043938538,
+    "desc": "Blended ordinal a=0.3"
+  },
+  "blended_a0.35": {
+    "f1": 0.26593874308244797,
+    "acc": 0.2910735392363431,
+    "mae": 1.2899172619353512,
+    "desc": "Blended ordinal a=0.35"
+  },
+  "blended_a0.4": {
+    "f1": 0.26423185946286554,
+    "acc": 0.29089367387841103,
+    "mae": 1.261421450228686,
+    "desc": "Blended ordinal a=0.4"
+  },
+  "blended_a0.5": {
+    "f1": 0.2532234976853823,
+    "acc": 0.2849067269643867,
+    "mae": 1.220129503057711,
+    "desc": "Blended ordinal a=0.5"
+  },
+  "blended_a0.6": {
+    "f1": 0.23480477674382488,
+    "acc": 0.2750912174315227,
+    "mae": 1.1885759802662008,
+    "desc": "Blended ordinal a=0.6"
+  },
+  "optuna_purged": {
+    "f1": 0.2541336658176346,
+    "acc": 0.25430392106480293,
+    "mae": 1.431445603576751,
+    "desc": "Optuna-tuned (purged CV, 22 feat)"
+  },
+  "combo_optuna_recency": {
+    "f1": 0.2607721581064888,
+    "acc": 0.2590318104733028,
+    "mae": 1.4024101957962896,
+    "desc": "Optuna + recency(365d)"
+  },
+  "combo_optuna_clean": {
+    "f1": 0.2569951133928558,
+    "acc": 0.26370830977953647,
+    "mae": 1.4317025540880826,
+    "desc": "Optuna + boundary filter"
+  },
+  "combo_all": {
+    "f1": 0.2670742288101703,
+    "acc": 0.2712626548126831,
+    "mae": 1.3987871935865153,
+    "desc": "Optuna + recency + boundary filter"
+  }
+}
