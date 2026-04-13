@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
-import { toast } from 'sonner';
 import * as stockService from '@/services/stockService';
-import * as watchlistService from '@/services/watchlistService';
 import { ApiException } from '@/services/api';
 import { usePrediction } from '@/hooks/usePrediction';
-import { useWatchlist } from '@/hooks/useWatchlist';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import StockHeader from '@/components/stock/StockHeader';
 import StockChart from '@/components/stock/StockChart';
@@ -14,6 +12,7 @@ import PriceSummary from '@/components/stock/PriceSummary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import type { StockDetail } from '@/types';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 
 export default function StockDetailPage() {
   const { ticker } = useParams<{ ticker: string }>();
@@ -32,11 +31,14 @@ export default function StockDetailPage() {
     predict,
   } = usePrediction();
 
-  const { items, refetch } = useWatchlist();
+  const { items, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
   const inWatchlist = items.some(i => i.ticker === ticker);
+
+  const { add: addRecentlyViewed } = useRecentlyViewed();
 
   useEffect(() => {
     if (!ticker) return;
+    addRecentlyViewed(ticker);
 
     async function load() {
       setIsLoading(true);
@@ -64,15 +66,10 @@ export default function StockDetailPage() {
     setIsTogglingWatchlist(true);
     try {
       if (inWatchlist) {
-        await watchlistService.remove(ticker);
-        toast.success(`${ticker} removed from watchlist`);
+        await removeFromWatchlist(ticker);
       } else {
-        await watchlistService.add(ticker);
-        toast.success(`${ticker} added to watchlist`);
+        await addToWatchlist(ticker);
       }
-      await refetch();
-    } catch {
-      toast.error('Failed to update watchlist');
     } finally {
       setIsTogglingWatchlist(false);
     }
@@ -80,12 +77,18 @@ export default function StockDetailPage() {
 
   if (error === 'not_found') {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <h2 className="text-2xl font-bold">Stock not found</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col items-center justify-center gap-4 py-24 animate-slide-up">
+        <span className="inline-block rounded-full bg-red-500/10 border border-red-500/20 px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-red-400">
+          Not found
+        </span>
+        <h2 className="font-heading text-2xl font-bold tracking-[-0.03em]">Stock not found</h2>
+        <p className="text-sm text-gray-500">
           The ticker &ldquo;{ticker}&rdquo; could not be found.
         </p>
-        <Link to="/dashboard" className="text-primary underline">
+        <Link
+          to="/dashboard"
+          className="text-purple-400 hover:text-purple-300 text-sm transition-colors duration-300"
+        >
           Go to Dashboard
         </Link>
       </div>
@@ -94,10 +97,11 @@ export default function StockDetailPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16">
-        <p className="text-sm text-destructive">{error}</p>
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-sm text-red-400">{error}</p>
         <Button
           variant="outline"
+          className="rounded-xl border-white/[0.08] hover:bg-white/[0.06]"
           onClick={() => {
             setError(null);
             setIsLoading(true);
@@ -114,21 +118,21 @@ export default function StockDetailPage() {
 
   if (isLoading || !stock) {
     return (
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 animate-slide-up">
         <div className="flex justify-between">
           <div className="space-y-2">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-9 w-32 rounded-lg bg-white/[0.04]" />
+            <Skeleton className="h-5 w-48 rounded-lg bg-white/[0.04]" />
           </div>
           <div className="space-y-2">
-            <Skeleton className="h-9 w-28" />
-            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-9 w-28 rounded-lg bg-white/[0.04]" />
+            <Skeleton className="h-5 w-20 rounded-lg bg-white/[0.04]" />
           </div>
         </div>
-        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="h-[400px] w-full rounded-2xl bg-white/[0.04]" />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Skeleton className="h-60" />
-          <Skeleton className="h-60" />
+          <Skeleton className="h-60 rounded-2xl bg-white/[0.04]" />
+          <Skeleton className="h-60 rounded-2xl bg-white/[0.04]" />
         </div>
       </div>
     );
@@ -142,7 +146,7 @@ export default function StockDetailPage() {
     ? ((latestPrice - prevClose) / prevClose) * 100 : null;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-slide-up">
       <StockHeader
         ticker={stock.ticker}
         name={stock.name}

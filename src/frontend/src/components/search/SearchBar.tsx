@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { MagnifyingGlass } from '@phosphor-icons/react';
-import { Input } from '@/components/ui/input';
 import { useStockSearch } from '@/hooks/useStockSearch';
 import SearchDropdown from './SearchDropdown';
 
@@ -14,7 +13,6 @@ export default function SearchBar() {
 
   const { results, isLoading } = useStockSearch(query, isOpen);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -84,12 +82,13 @@ export default function SearchBar() {
   return (
     <div ref={wrapperRef} className="relative flex-1 max-w-md mx-auto">
       <MagnifyingGlass
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        size={14}
+        weight="light"
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500"
       />
-      <Input
-        placeholder="Search stocks..."
-        className="pl-9"
+      <input
+        placeholder="Search stocks…"
+        className="glass-input w-full rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-gray-600 outline-none"
         value={query}
         onChange={handleChange}
         onFocus={handleFocus}

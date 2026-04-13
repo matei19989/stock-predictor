@@ -1,6 +1,7 @@
-import { useWatchlist } from '@/hooks/useWatchlist';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import SummaryCards from '@/components/dashboard/SummaryCards';
 import WatchlistTable from '@/components/dashboard/WatchlistTable';
+import MarketOverview from '@/components/dashboard/MarketOverview';
 import { Button } from '@/components/ui/button';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
@@ -10,9 +11,13 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" onClick={() => void refetch()}>
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-sm text-red-400">{error}</p>
+        <Button
+          variant="outline"
+          onClick={() => void refetch()}
+          className="rounded-xl border-white/[0.08] hover:bg-white/[0.06]"
+        >
           Try again
         </Button>
       </div>
@@ -20,12 +25,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Your watchlist overview</p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-slide-up">
+      {/* Page header */}
+      <div className="space-y-2">
+        <span className="inline-block rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-purple-400">
+          Overview
+        </span>
+        <h1 className="font-heading text-3xl font-bold tracking-[-0.03em]">Dashboard</h1>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Your portfolio at a glance — watchlist, signals, and market overview.
+        </p>
       </div>
+
       <SummaryCards items={items} isLoading={isLoading} />
+      <MarketOverview items={items} isLoading={isLoading} />
       <WatchlistTable items={items} onRemove={remove} isLoading={isLoading} />
     </div>
   );

@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Check } from '@phosphor-icons/react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import * as watchlistService from '@/services/watchlistService';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import { formatPrice } from '@/utils/formatters';
 import type { StockSearchResult } from '@/types';
 
@@ -14,6 +11,7 @@ interface SearchResultCardProps {
 
 export default function SearchResultCard({ result }: SearchResultCardProps) {
   const navigate = useNavigate();
+  const { add: addToWatchlist } = useWatchlist();
   const [inWatchlist, setInWatchlist] = useState(result.isInWatchlist);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -21,50 +19,53 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
     e.stopPropagation();
     setIsAdding(true);
     try {
-      await watchlistService.add(result.ticker);
+      await addToWatchlist(result.ticker);
       setInWatchlist(true);
-      toast.success(`${result.ticker} added to watchlist`);
-    } catch {
-      toast.error(`Failed to add ${result.ticker}`);
     } finally {
       setIsAdding(false);
     }
   }
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-muted/50"
+    <div
+      className="group cursor-pointer rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-purple-500/15 hover:bg-white/[0.04]"
       onClick={() => navigate(`/stocks/${result.ticker}`)}
     >
-      <CardContent className="flex items-center justify-between p-4">
-        <div>
-          <p className="font-semibold">{result.ticker}</p>
-          <p className="text-sm text-muted-foreground">{result.name ?? '—'}</p>
-          {result.sector && (
-            <p className="text-xs text-muted-foreground">{result.sector}</p>
-          )}
+      <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.03] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="font-heading font-bold tracking-[-0.02em] text-white group-hover:text-purple-300 transition-colors duration-300">
+              {result.ticker}
+            </p>
+            <p className="text-sm text-gray-400 truncate">{result.name ?? '—'}</p>
+            {result.sector && (
+              <span className="inline-block mt-1.5 text-[10px] uppercase tracking-[0.15em] text-gray-600">
+                {result.sector}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 shrink-0 ml-3">
+            <span className="tabular-nums font-medium text-gray-300">
+              {formatPrice(result.latestClose)}
+            </span>
+            {inWatchlist ? (
+              <span className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Check size={10} weight="bold" />
+                Watching
+              </span>
+            ) : (
+              <button
+                disabled={isAdding}
+                onClick={handleAdd}
+                className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] disabled:opacity-40"
+              >
+                <Plus size={10} weight="bold" />
+                {isAdding ? 'Adding…' : 'Add'}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="tabular-nums font-medium">
-            {formatPrice(result.latestClose)}
-          </span>
-          {inWatchlist ? (
-            <Button variant="outline" size="sm" disabled>
-              <Check size={14} className="mr-1" /> In Watchlist
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isAdding}
-              onClick={handleAdd}
-            >
-              <Plus size={14} className="mr-1" />
-              {isAdding ? 'Adding\u2026' : 'Add'}
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

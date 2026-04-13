@@ -1,17 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as watchlistService from '@/services/watchlistService';
 import type { WatchlistItem } from '@/types';
+import type { ReactNode } from 'react';
 
-interface UseWatchlistReturn {
+interface WatchlistContextValue {
   items: WatchlistItem[];
   isLoading: boolean;
   error: string | null;
+  add: (ticker: string) => Promise<void>;
   remove: (ticker: string) => Promise<void>;
   refetch: () => Promise<void>;
 }
 
-export function useWatchlist(): UseWatchlistReturn {
+const WatchlistContext = createContext<WatchlistContextValue | null>(null);
+
+export function WatchlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,8 +37,17 @@ export function useWatchlist(): UseWatchlistReturn {
     void fetchItems();
   }, [fetchItems]);
 
+  const add = useCallback(async (ticker: string) => {
+    try {
+      await watchlistService.add(ticker);
+      toast.success(`${ticker} added to watchlist`);
+      await fetchItems();
+    } catch {
+      toast.error(`Failed to add ${ticker}`);
+    }
+  }, [fetchItems]);
+
   const remove = useCallback(async (ticker: string) => {
-    // Capture current state for rollback
     let snapshot: WatchlistItem[] = [];
     setItems((prev) => {
       snapshot = prev;
@@ -45,10 +58,20 @@ export function useWatchlist(): UseWatchlistReturn {
       await watchlistService.remove(ticker);
       toast.success(`${ticker} removed from watchlist`);
     } catch {
-      setItems(snapshot); // revert
+      setItems(snapshot);
       toast.error(`Failed to remove ${ticker}`);
     }
   }, []);
 
-  return { items, isLoading, error, remove, refetch: fetchItems };
+  return (
+    <WatchlistContext value={{ items, isLoading, error, add, remove, refetch: fetchItems }}>
+      {children}
+    </WatchlistContext>
+  );
+}
+
+export function useWatchlist() {
+  const ctx = useContext(WatchlistContext);
+  if (!ctx) throw new Error('useWatchlist must be used within WatchlistProvider');
+  return ctx;
 }

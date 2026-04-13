@@ -1,16 +1,73 @@
+import { Link } from 'react-router';
 import LoginForm from '@/components/auth/LoginForm';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import chartVideo from '@/assets/chart-video.mp4';
 
 export default function LoginPage() {
   useDocumentTitle('Sign In');
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">StockPredictor</h1>
-          <p className="text-sm text-muted-foreground">Sign in to your account</p>
+    <div className="flex min-h-[100dvh] bg-[#07080d]">
+      {/* ── Left panel: form ────────────────────────────── */}
+      <div className="relative flex w-full flex-col justify-between px-8 py-8 lg:w-[45%] lg:px-16 xl:px-24 overflow-hidden">
+        {/* Background glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-purple-600/[0.07] rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-0 -right-[100px] w-[350px] h-[350px] bg-teal-500/[0.04] rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute top-[65%] -left-[100px] w-[300px] h-[300px] bg-pink-500/[0.03] rounded-full blur-[130px] pointer-events-none" />
+
+        {/* Noise overlay */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.035]">
+          <svg width="100%" height="100%">
+            <filter id="login-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#login-grain)" />
+          </svg>
         </div>
-        <LoginForm />
+
+        {/* Logo — top */}
+        <div className="relative z-10">
+          <Link to="/" className="inline-block">
+            <h1 className="font-heading text-xl font-bold tracking-[-0.03em] bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              Grafynt
+            </h1>
+          </Link>
+        </div>
+
+        {/* Form — center */}
+        <div className="relative z-10 w-full max-w-[400px] mx-auto animate-slide-up">
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                Welcome back
+              </h2>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Sign in to access your trading dashboard
+              </p>
+            </div>
+            <LoginForm />
+          </div>
+        </div>
+
+        {/* Spacer — bottom (keeps vertical centering) */}
+        <div className="relative z-10" />
+      </div>
+
+      {/* ── Right panel: video ──────────────────────────── */}
+      <div className="relative hidden lg:block lg:w-[55%] p-3 pl-0">
+        <div className="relative h-full w-full overflow-hidden rounded-2xl">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+            src={chartVideo}
+          />
+          {/* Left-edge gradient blend into the form panel */}
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#07080d]/60 to-transparent" />
+          {/* Subtle top/bottom vignette */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#07080d]/30 via-transparent to-[#07080d]/40" />
+        </div>
       </div>
     </div>
   );

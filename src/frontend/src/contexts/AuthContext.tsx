@@ -15,8 +15,8 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, turnstileToken: string) => Promise<void>;
+  register: (username: string, email: string, password: string, turnstileToken: string) => Promise<void>;
   logout: () => void;
   /** Called by login/register after a successful API response. */
   setAuthFromResponse: (response: AuthResponse) => void;
@@ -60,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ username: response.username, email: response.email });
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const response = await authService.login(email, password);
+  const login = useCallback(async (email: string, password: string, turnstileToken: string): Promise<void> => {
+    const response = await authService.login(email, password, turnstileToken);
     setAuthFromResponse(response);
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get('returnTo') ?? '/dashboard';
@@ -69,8 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate, setAuthFromResponse]);
 
   const register = useCallback(
-    async (username: string, email: string, password: string): Promise<void> => {
-      const response = await authService.register(username, email, password);
+    async (username: string, email: string, password: string, turnstileToken: string): Promise<void> => {
+      const response = await authService.register(username, email, password, turnstileToken);
       setAuthFromResponse(response);
       navigate('/dashboard', { replace: true });
     },

@@ -23,3 +23,8 @@ export async function getLatest(
     throw err;
   }
 }
+
+export async function getUserPredictionCount(): Promise<number> {
+  const { data } = await api.get<{ count: number }>('/api/predictions/user/count');
+  return data.count;
+}
