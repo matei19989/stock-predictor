@@ -19,6 +19,7 @@ public class StockServiceTests
     private readonly Mock<IStockRepository> _stocks = new();
     private readonly Mock<IStockPriceRepository> _prices = new();
     private readonly Mock<IWatchlistRepository> _watchlist = new();
+    private readonly Mock<IPredictionRepository> _predictions = new();
     private readonly Mock<IMlServiceClient> _ml = new();
     private readonly Mock<AppDbContext> _db;
     private readonly StockService _sut;
@@ -53,7 +54,7 @@ public class StockServiceTests
 
         _sut = new StockService(
             _stocks.Object, _prices.Object, _watchlist.Object,
-            _ml.Object, _db.Object,
+            _predictions.Object, _ml.Object, _db.Object,
             NullLogger<StockService>.Instance);
     }
 

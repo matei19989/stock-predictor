@@ -36,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<IStockPriceRepository, StockPriceRepository>();
         services.AddScoped<IWatchlistRepository, WatchlistRepository>();
         services.AddScoped<IPredictionRepository, PredictionRepository>();
+        services.AddScoped<IStockVisitRepository, StockVisitRepository>();
+        services.AddScoped<IUserPredictionLogRepository, UserPredictionLogRepository>();
 
         // Services
         services.AddScoped<IAuthService, AuthService>();
@@ -61,6 +63,9 @@ public static class DependencyInjection
             options.Retry.MaxRetryAttempts = 3;
             options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
         });
+
+        // Turnstile verification client
+        services.AddHttpClient("Turnstile");
 
         // Hangfire
         services.AddHangfire(config =>

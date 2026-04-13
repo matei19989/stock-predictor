@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<StockPrice> StockPrices => Set<StockPrice>();
     public DbSet<WatchlistItem> WatchlistItems => Set<WatchlistItem>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
+    public DbSet<StockVisit> StockVisits => Set<StockVisit>();
+    public DbSet<UserPredictionLog> UserPredictionLogs => Set<UserPredictionLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

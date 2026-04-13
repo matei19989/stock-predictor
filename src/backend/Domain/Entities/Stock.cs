@@ -11,4 +11,6 @@ public class Stock
     public ICollection<StockPrice> Prices { get; set; } = [];
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = [];
     public ICollection<Prediction> Predictions { get; set; } = [];
+    public ICollection<StockVisit> StockVisits { get; set; } = [];
+    public ICollection<UserPredictionLog> PredictionLogs { get; set; } = [];
 }

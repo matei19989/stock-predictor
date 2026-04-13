@@ -2,7 +2,7 @@
 
 Stock market analysis and prediction app. View stock data, manage watchlists, and get ML-powered trading signal recommendations (Strong Sell to Strong Buy).
 
-**Stack:** React + TypeScript | .NET 9 API | Python FastAPI (ML) | PostgreSQL
+**Stack:** React + TypeScript | .NET 9 API | Python FastAPI (ML) | PostgreSQL | Cloudflare Turnstile
 
 ## Prerequisites
 
@@ -142,5 +142,7 @@ StockPredictor/
 | Variable | Service | Description |
 |----------|---------|-------------|
 | `JWT_KEY` | Backend | JWT signing key (min 32 chars, required) |
+| `TURNSTILE_SITE_KEY` | Frontend | Cloudflare Turnstile site key (bot protection) |
+| `TURNSTILE_SECRET_KEY` | Backend | Cloudflare Turnstile secret key (bot protection) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | ML | Path to GCP service account JSON (optional) |
 | `VITE_API_URL` | Frontend | Backend API base URL (empty in dev, proxied by Vite) |

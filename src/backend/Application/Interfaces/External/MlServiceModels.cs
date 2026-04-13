@@ -35,3 +35,8 @@ public record MlPredictResponse(
     string Timestamp,
     [property: JsonPropertyName("low_confidence")] bool LowConfidence
 );
+
+public record MlTickerInfo(
+    string? Name,
+    string? Sector
+);

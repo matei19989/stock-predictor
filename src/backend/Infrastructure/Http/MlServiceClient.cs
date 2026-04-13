@@ -91,4 +91,21 @@ public class MlServiceClient : IMlServiceClient
         return await response.Content.ReadFromJsonAsync<MlPredictResponse>(cancellationToken: cancellationToken)
             ?? throw new MlServiceUnavailableException("ML service returned an unexpected response.");
     }
+
+    public async Task<Dictionary<string, MlTickerInfo>?> GetTickerNamesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.GetAsync("/names", cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Dictionary<string, MlTickerInfo>>(
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch ticker names from ML service");
+            return null;
+        }
+    }
 }
