@@ -59,6 +59,7 @@ class TestRunPrediction:
             label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={"AAPL": "apple"},
+            model_type="sklearn",
         )
 
         assert result["ticker"] == "AAPL"
@@ -89,6 +90,7 @@ class TestRunPrediction:
             model=low_conf_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         assert result["low_confidence"] is True
@@ -107,6 +109,7 @@ class TestRunPrediction:
                 model=mock_model, label_encoder=mock_label_encoder,
                 feature_columns=feature_columns,
                 ticker_to_company={},
+                model_type="sklearn",
             )
 
     @patch("app.services.prediction.fetch_sentiment")
@@ -145,6 +148,7 @@ class TestRunPrediction:
             model=mock_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         total = sum(result["probabilities"].values())
@@ -164,6 +168,7 @@ class TestRunPrediction:
             model=mock_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         expected_keys = {"Strong Sell", "Sell", "Hold", "Buy", "Strong Buy"}
@@ -187,6 +192,7 @@ class TestRunPrediction:
             model=model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         conf_str = str(result["confidence"])
@@ -208,6 +214,7 @@ class TestRunPrediction:
             model=mock_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         assert result["features_used"] == len(feature_columns)
@@ -227,6 +234,7 @@ class TestRunPrediction:
             model=mock_model, label_encoder=mock_label_encoder,
             feature_columns=feature_columns,
             ticker_to_company={},
+            model_type="sklearn",
         )
 
         from datetime import datetime
