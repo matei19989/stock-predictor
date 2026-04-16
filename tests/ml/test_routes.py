@@ -13,10 +13,15 @@ from app.routes import data, health, predict
 
 @pytest.fixture
 def app_healthy() -> FastAPI:
-    """Create a test app with model_loaded=True."""
+    """Create a test app with models loaded for all horizons."""
     app = FastAPI()
     app.state.model_loaded = True
-    app.state.model = MagicMock()
+    mock_model = MagicMock()
+    app.state.models = {
+        "3m": {"model": mock_model, "type": "sklearn"},
+        "6m": {"model": mock_model, "type": "sklearn"},
+        "1y": {"model": mock_model, "type": "sklearn"},
+    }
     app.state.label_encoder = MagicMock()
     app.state.feature_columns = ["feat_" + str(i) for i in range(22)]
     app.state.training_metadata = {}
@@ -33,7 +38,7 @@ def app_degraded() -> FastAPI:
     """Create a test app with model_loaded=False."""
     app = FastAPI()
     app.state.model_loaded = False
-    app.state.model = None
+    app.state.models = {}
     app.state.label_encoder = None
     app.state.feature_columns = []
     app.state.training_metadata = {}
@@ -54,6 +59,7 @@ class TestHealthEndpoint:
         body = response.json()
         assert body["status"] == "healthy"
         assert body["model_loaded"] is True
+        assert set(body["horizons"]) == {"3m", "6m", "1y"}
 
     def test_degraded_when_model_not_loaded(self, app_degraded: FastAPI):
         client = TestClient(app_degraded)
@@ -63,6 +69,7 @@ class TestHealthEndpoint:
         body = response.json()
         assert body["status"] == "degraded"
         assert body["model_loaded"] is False
+        assert body["horizons"] == []
 
 
 class TestDataEndpoint:
@@ -192,7 +199,9 @@ class TestPredictEndpoint:
 
         assert response.status_code == 503
 
-    def test_unsupported_horizon_returns_501(self, app_healthy: FastAPI):
+    def test_missing_horizon_model_returns_501(self, app_healthy: FastAPI):
+        """A horizon whose model entry is None should return 501."""
+        app_healthy.state.models["6m"] = None
         client = TestClient(app_healthy)
         response = client.post("/predict", json={"ticker": "AAPL", "horizon": "6m"})
 
@@ -236,6 +245,38 @@ class TestPredictEndpoint:
         response = client.post("/predict", json={"ticker": "", "horizon": "3m"})
 
         assert response.status_code == 422
+
+    @patch("app.routes.predict.run_prediction")
+    def test_6m_prediction_succeeds(self, mock_predict: MagicMock, app_healthy: FastAPI):
+        mock_predict.return_value = {
+            "ticker": "AAPL", "horizon": "6m", "signal": "Hold",
+            "confidence": 0.28, "probabilities": {
+                "Strong Sell": 0.10, "Sell": 0.15, "Hold": 0.28, "Buy": 0.27, "Strong Buy": 0.20,
+            },
+            "features_used": 22, "timestamp": "2024-01-01T00:00:00+00:00", "low_confidence": True,
+        }
+
+        client = TestClient(app_healthy)
+        response = client.post("/predict", json={"ticker": "AAPL", "horizon": "6m"})
+
+        assert response.status_code == 200
+        assert response.json()["horizon"] == "6m"
+
+    @patch("app.routes.predict.run_prediction")
+    def test_1y_prediction_succeeds(self, mock_predict: MagicMock, app_healthy: FastAPI):
+        mock_predict.return_value = {
+            "ticker": "AAPL", "horizon": "1y", "signal": "Buy",
+            "confidence": 0.32, "probabilities": {
+                "Strong Sell": 0.08, "Sell": 0.12, "Hold": 0.22, "Buy": 0.32, "Strong Buy": 0.26,
+            },
+            "features_used": 22, "timestamp": "2024-01-01T00:00:00+00:00", "low_confidence": False,
+        }
+
+        client = TestClient(app_healthy)
+        response = client.post("/predict", json={"ticker": "AAPL", "horizon": "1y"})
+
+        assert response.status_code == 200
+        assert response.json()["horizon"] == "1y"
 
 
 class TestDataEndpointEdgeCases:

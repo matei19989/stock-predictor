@@ -11,7 +11,7 @@ namespace StockPredictor.Infrastructure.Services;
 
 public class PredictionService : IPredictionService
 {
-    private static readonly HashSet<Horizon> SupportedHorizons = [Horizon.ThreeMonths];
+    private static readonly HashSet<Horizon> SupportedHorizons = [Horizon.ThreeMonths, Horizon.SixMonths, Horizon.OneYear];
 
     private readonly IPredictionRepository _predictions;
     private readonly IStockRepository _stocks;

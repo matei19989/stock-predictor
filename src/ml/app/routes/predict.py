@@ -17,12 +17,13 @@ def predict(request: Request, body: PredictRequest) -> PredictResponse:
     """Run XGBoost inference and return a trading signal."""
     state = request.app.state
 
-    # Check model readiness
+    # Check overall model readiness
     if not state.model_loaded:
         raise HTTPException(status_code=503, detail={"error": "model_not_ready"})
 
-    # Only 3m horizon has a trained model for now
-    if body.horizon != "3m":
+    # Look up model for requested horizon
+    model_entry = state.models.get(body.horizon)
+    if model_entry is None:
         raise HTTPException(
             status_code=501,
             detail={"error": "horizon_not_supported", "detail": f"No trained model for '{body.horizon}' horizon yet"},
@@ -32,11 +33,11 @@ def predict(request: Request, body: PredictRequest) -> PredictResponse:
         result = run_prediction(
             ticker=body.ticker.upper(),
             horizon=body.horizon,
-            model=state.model,
+            model=model_entry["model"],
             label_encoder=state.label_encoder,
             feature_columns=state.feature_columns,
             ticker_to_company=state.ticker_to_company,
-            model_type=getattr(state, "model_type", "sklearn"),
+            model_type=model_entry["type"],
         )
     except ValueError as e:
         logger.warning("Data fetch failed for %s: %s", body.ticker, e)

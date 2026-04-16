@@ -13,7 +13,8 @@ Everything you need to enable each feature locally and in production.
 | JWT Auth | Secret key | appsettings.Development.json | `JWT_KEY` in `.env` | Azure App Settings / Key Vault |
 | DB Migrations | EF Core CLI | `dotnet ef database update` | Auto on startup | Run once against prod DB |
 | Stock Data (yfinance) | Internet | Works out of the box | Works out of the box | Works out of the box |
-| Predictions (XGBoost) | `.joblib` model files | Train via notebook 07 | Copy into `src/ml/app/models/` | Include in Docker image |
+| Predictions (XGBoost) | `.json` model files (3m, 6m, 1y) | Train via notebooks 09+10 | Copy into `src/ml/app/models/` | Include in Docker image |
+| Email Confirmation | Azure Communication Services | Auto-confirm (no config needed) | Auto-confirm (no config needed) | Set `Email__*` env vars |
 | GDELT Sentiment | BigQuery access | `gcloud auth application-default login` | Mount ADC or set `GCP_CREDENTIALS_JSON` | Workload Identity Federation |
 | Turnstile (bot protection) | Cloudflare account | Test keys in `.env` | `TURNSTILE_*` in `.env` | Azure App Settings |
 
@@ -80,25 +81,28 @@ Migrations run automatically on backend startup via EF Core. Ensure the database
 
 ---
 
-## 4. ML Model Files (.joblib)
+## 4. ML Model Files
 
 **These are gitignored and must be generated locally.**
 
 ### How to generate
-1. Open `notebooks/07_model_optimization.ipynb`
-2. Run all cells — this trains the model and saves:
-   - `src/ml/app/models/xgb_3m_sentiment.joblib` (XGBoost model)
-   - `src/ml/app/models/label_encoder.joblib` (label encoder)
-3. Verify: `ls src/ml/app/models/*.joblib`
+1. Open `notebooks/09_model_improvements.ipynb` — run all cells for the 3m model
+2. Open `notebooks/10_multi_horizon_training.ipynb` — run all cells for the 6m and 1y models
+3. This saves:
+   - `src/ml/app/models/xgb_3m_blended.json` (3m model, blended ordinal loss)
+   - `src/ml/app/models/xgb_6m_blended.json` (6m model)
+   - `src/ml/app/models/xgb_1y_blended.json` (1y model)
+   - `src/ml/app/models/label_encoder.joblib` (shared label encoder)
+4. Verify: `ls src/ml/app/models/xgb_*_blended.json`
 
 ### Local Dev
 After training, the files are in place. ML service picks them up on startup.
 
 ### Docker
-The Dockerfile copies everything from `src/ml/` including the `models/` directory. **Train the model before building the Docker image.**
+The Dockerfile copies everything from `src/ml/` including the `models/` directory. **Train the models before building the Docker image.**
 
 ### Azure Deployment
-Same as Docker — the `.joblib` files must exist in `src/ml/app/models/` before `docker build`.
+Same as Docker — the model files must exist in `src/ml/app/models/` before `docker build`.
 
 ---
 
@@ -214,7 +218,36 @@ az webapp config appsettings set --name <app> --resource-group <rg> \
 
 ---
 
-## 8. Cloudflare Turnstile (Bot Protection)
+## 8. Email Confirmation (Azure Communication Services)
+
+Registration requires email confirmation before login. In development, this is auto-confirmed (no setup needed).
+
+### Local Dev
+No configuration needed. When `Email:ConnectionString` is empty, registration auto-confirms and returns a JWT directly. The email flow is completely skipped.
+
+### Docker (local)
+Same as local dev — no email config needed. Auto-confirms.
+
+### Azure Deployment
+
+#### Step 1: Create Azure Communication Services resource
+1. In Azure Portal → Create resource → "Communication Services"
+2. Create an Email Communication Services resource → add an Azure-managed domain
+3. Copy the **connection string** from the resource's Keys page
+
+#### Step 2: Configure backend
+```bash
+az webapp config appsettings set --name <app> --resource-group <rg> \
+  --settings Email__ConnectionString="<acs-connection-string>" \
+              Email__FrontendUrl="https://your-frontend-domain.com" \
+              Email__SenderAddress="DoNotReply@<your-azure-domain>.azurecomm.net"
+```
+
+The sender address comes from the managed domain created in Step 1.
+
+---
+
+## 9. Cloudflare Turnstile (Bot Protection)
 
 Protects login and register endpoints from bots. Uses managed mode with `interaction-only` appearance.
 
@@ -263,6 +296,10 @@ GCP_PROJECT_ID=stock-predictor-491310
 GCP_CREDENTIALS_JSON=<base64-encoded-service-account-json>  # optional
 TURNSTILE_SITE_KEY=<your-cloudflare-site-key>
 TURNSTILE_SECRET_KEY=<your-cloudflare-secret-key>
+# Email — leave empty for auto-confirm in local Docker
+# Email__ConnectionString=
+# Email__FrontendUrl=http://localhost:3000
+# Email__SenderAddress=
 ```
 
 ### Azure App Settings (production)
@@ -277,6 +314,9 @@ TURNSTILE_SECRET_KEY=<your-cloudflare-secret-key>
 | `ASPNETCORE_ENVIRONMENT` | Backend | No | Set to `Production` |
 | `TURNSTILE_SITE_KEY` | Frontend | Yes | Cloudflare Turnstile site key (build-time) |
 | `Turnstile__SecretKey` | Backend | Yes | Cloudflare Turnstile secret key |
+| `Email__ConnectionString` | Backend | No* | Azure Communication Services connection string |
+| `Email__FrontendUrl` | Backend | No* | Frontend URL for confirmation links |
+| `Email__SenderAddress` | Backend | No* | Azure-managed sender address |
 
 ---
 
@@ -299,8 +339,16 @@ c = _get_bq_client()
 print('OK' if c else 'FAILED')
 "
 
-# Test prediction (requires model files)
+# Test prediction — all horizons (requires model files)
 curl -X POST http://localhost:8000/predict \
   -H 'Content-Type: application/json' \
   -d '{"ticker": "AAPL", "horizon": "3m"}'
+
+curl -X POST http://localhost:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"ticker": "AAPL", "horizon": "6m"}'
+
+curl -X POST http://localhost:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"ticker": "AAPL", "horizon": "1y"}'
 ```
