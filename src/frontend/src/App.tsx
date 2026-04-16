@@ -5,6 +5,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
+import ConfirmPendingPage from '@/pages/ConfirmPendingPage';
+import ConfirmEmailPage from '@/pages/ConfirmEmailPage';
 import DashboardPage from '@/pages/DashboardPage';
 import StockDetailPage from '@/pages/StockDetailPage';
 import SearchResultsPage from '@/pages/SearchResultsPage';
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/confirm-pending" element={<ConfirmPendingPage />} />
+        <Route path="/confirm-email" element={<ConfirmEmailPage />} />
       </Route>
 
       {/* Protected routes — redirect to /login if not authenticated */}

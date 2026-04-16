@@ -15,8 +15,8 @@ public class AuthServiceTests
 {
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IWatchlistService> _watchlist = new();
+    private readonly Mock<IEmailService> _email = new();
     private readonly IConfiguration _config;
-    private readonly AuthService _sut;
 
     public AuthServiceTests()
     {
@@ -29,37 +29,65 @@ public class AuthServiceTests
                 ["Jwt:ExpiryDays"] = "7"
             })
             .Build();
-
-        _sut = new AuthService(_users.Object, _watchlist.Object, _config,
-            NullLogger<AuthService>.Instance);
     }
 
+    private AuthService CreateSut(IEmailService? email = null) =>
+        new(_users.Object, _watchlist.Object, _config, NullLogger<AuthService>.Instance, email);
+
+    // --- Register (dev mode: no email service) ---
+
     [Fact]
-    public async Task RegisterAsync_ValidData_ReturnsTokenWithCorrectUsername()
+    public async Task RegisterAsync_DevMode_ReturnsAuthResponse()
     {
+        var sut = CreateSut(email: null);
         _users.Setup(r => r.EmailExistsAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(false);
         _users.Setup(r => r.UsernameExistsAsync("alice", It.IsAny<CancellationToken>())).ReturnsAsync(false);
         _users.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _watchlist.Setup(w => w.SeedDefaultsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-        var result = await _sut.RegisterAsync(new RegisterRequest
+        var result = await sut.RegisterAsync(new RegisterRequest
         {
             Username = "alice",
             Email = "test@example.com",
             Password = "password123"
         });
 
-        result.Token.Should().NotBeNullOrEmpty();
-        result.Username.Should().Be("alice");
-        result.Email.Should().Be("test@example.com");
+        result.Should().BeOfType<AuthResponse>();
+        var auth = (AuthResponse)result;
+        auth.Token.Should().NotBeNullOrEmpty();
+        auth.Username.Should().Be("alice");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ProdMode_ReturnsPendingResponse()
+    {
+        var sut = CreateSut(email: _email.Object);
+        _users.Setup(r => r.EmailExistsAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _users.Setup(r => r.UsernameExistsAsync("alice", It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _users.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _watchlist.Setup(w => w.SeedDefaultsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _email.Setup(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var result = await sut.RegisterAsync(new RegisterRequest
+        {
+            Username = "alice",
+            Email = "test@example.com",
+            Password = "password123"
+        });
+
+        result.Should().BeOfType<RegisterPendingResponse>();
+        var pending = (RegisterPendingResponse)result;
+        pending.Email.Should().Be("t***@example.com");
+        _email.Verify(e => e.SendConfirmationEmailAsync("test@example.com", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task RegisterAsync_DuplicateEmail_ThrowsConflictException()
     {
+        var sut = CreateSut();
         _users.Setup(r => r.EmailExistsAsync("taken@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        await _sut.Invoking(s => s.RegisterAsync(new RegisterRequest
+        await sut.Invoking(s => s.RegisterAsync(new RegisterRequest
             {
                 Username = "alice",
                 Email = "taken@example.com",
@@ -72,10 +100,11 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_DuplicateUsername_ThrowsConflictException()
     {
+        var sut = CreateSut();
         _users.Setup(r => r.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         _users.Setup(r => r.UsernameExistsAsync("alice", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        await _sut.Invoking(s => s.RegisterAsync(new RegisterRequest
+        await sut.Invoking(s => s.RegisterAsync(new RegisterRequest
             {
                 Username = "alice",
                 Email = "new@example.com",
@@ -85,62 +114,165 @@ public class AuthServiceTests
             .WithMessage("*username*");
     }
 
+    // --- Login ---
+
+    [Fact]
+    public async Task LoginAsync_ValidCredentials_ReturnsToken()
+    {
+        var sut = CreateSut();
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct_password"),
+            CreatedAt = DateTime.UtcNow, IsEmailConfirmed = true
+        };
+        _users.Setup(r => r.GetByEmailAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        var result = await sut.LoginAsync(new LoginRequest { Email = "test@example.com", Password = "correct_password" });
+        result.Token.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task LoginAsync_UnconfirmedEmail_ThrowsForbiddenException()
+    {
+        var sut = CreateSut();
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct_password"),
+            CreatedAt = DateTime.UtcNow, IsEmailConfirmed = false
+        };
+        _users.Setup(r => r.GetByEmailAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        await sut.Invoking(s => s.LoginAsync(new LoginRequest { Email = "test@example.com", Password = "correct_password" }))
+            .Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("*confirm*email*");
+    }
+
     [Fact]
     public async Task LoginAsync_WrongPassword_ThrowsUnauthorizedException()
     {
+        var sut = CreateSut();
         var user = new User
         {
-            Id = Guid.NewGuid(),
-            Username = "alice",
-            Email = "test@example.com",
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct_password"),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow, IsEmailConfirmed = true
         };
-
         _users.Setup(r => r.GetByEmailAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        await _sut.Invoking(s => s.LoginAsync(new LoginRequest
-            {
-                Email = "test@example.com",
-                Password = "wrong_password"
-            }))
+        await sut.Invoking(s => s.LoginAsync(new LoginRequest { Email = "test@example.com", Password = "wrong_password" }))
             .Should().ThrowAsync<UnauthorizedException>();
     }
 
     [Fact]
     public async Task LoginAsync_EmailNotFound_ThrowsUnauthorizedException()
     {
+        var sut = CreateSut();
         _users.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
 
-        await _sut.Invoking(s => s.LoginAsync(new LoginRequest
-            {
-                Email = "ghost@example.com",
-                Password = "password123"
-            }))
+        await sut.Invoking(s => s.LoginAsync(new LoginRequest { Email = "ghost@example.com", Password = "password123" }))
             .Should().ThrowAsync<UnauthorizedException>();
     }
 
+    // --- Confirm Email ---
+
     [Fact]
-    public async Task LoginAsync_ValidCredentials_ReturnsToken()
+    public async Task ConfirmEmailAsync_ValidToken_SetsConfirmedAndClearsToken()
     {
+        var sut = CreateSut();
         var user = new User
         {
-            Id = Guid.NewGuid(),
-            Username = "alice",
-            Email = "test@example.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct_password"),
-            CreatedAt = DateTime.UtcNow
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow,
+            IsEmailConfirmed = false, EmailConfirmationToken = "valid-token",
+            EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddMinutes(30)
         };
+        _users.Setup(r => r.GetByConfirmationTokenAsync("valid-token", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _users.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
+        await sut.ConfirmEmailAsync("valid-token");
+
+        user.IsEmailConfirmed.Should().BeTrue();
+        user.EmailConfirmationToken.Should().BeNull();
+        user.EmailConfirmationTokenExpiresAt.Should().BeNull();
+        _users.Verify(r => r.UpdateAsync(user, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_ExpiredToken_ThrowsGoneException()
+    {
+        var sut = CreateSut();
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow,
+            IsEmailConfirmed = false, EmailConfirmationToken = "expired-token",
+            EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddHours(-1)
+        };
+        _users.Setup(r => r.GetByConfirmationTokenAsync("expired-token", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        await sut.Invoking(s => s.ConfirmEmailAsync("expired-token"))
+            .Should().ThrowAsync<AppGoneException>()
+            .WithMessage("*expired*");
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_InvalidToken_ThrowsNotFoundException()
+    {
+        var sut = CreateSut();
+        _users.Setup(r => r.GetByConfirmationTokenAsync("bad-token", It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
+
+        await sut.Invoking(s => s.ConfirmEmailAsync("bad-token"))
+            .Should().ThrowAsync<NotFoundException>();
+    }
+
+    // --- Resend Confirmation ---
+
+    [Fact]
+    public async Task ResendConfirmationAsync_ValidUnconfirmedUser_SendsEmail()
+    {
+        var sut = CreateSut(email: _email.Object);
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow, IsEmailConfirmed = false
+        };
+        _users.Setup(r => r.GetByEmailAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _users.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _email.Setup(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await sut.ResendConfirmationAsync("test@example.com");
+
+        user.EmailConfirmationToken.Should().NotBeNullOrEmpty();
+        user.EmailConfirmationTokenExpiresAt.Should().BeAfter(DateTime.UtcNow);
+        _email.Verify(e => e.SendConfirmationEmailAsync("test@example.com", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResendConfirmationAsync_UnknownEmail_DoesNotThrow()
+    {
+        var sut = CreateSut(email: _email.Object);
+        _users.Setup(r => r.GetByEmailAsync("ghost@example.com", It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
+
+        await sut.Invoking(s => s.ResendConfirmationAsync("ghost@example.com"))
+            .Should().NotThrowAsync();
+        _email.Verify(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResendConfirmationAsync_AlreadyConfirmed_DoesNotSendEmail()
+    {
+        var sut = CreateSut(email: _email.Object);
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Username = "alice", Email = "test@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow, IsEmailConfirmed = true
+        };
         _users.Setup(r => r.GetByEmailAsync("test@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        var result = await _sut.LoginAsync(new LoginRequest
-        {
-            Email = "test@example.com",
-            Password = "correct_password"
-        });
+        await sut.ResendConfirmationAsync("test@example.com");
 
-        result.Token.Should().NotBeNullOrEmpty();
-        result.Username.Should().Be("alice");
+        _email.Verify(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

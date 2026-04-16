@@ -18,6 +18,13 @@ export interface AuthResponse {
   expiresAt: string; // ISO 8601 UTC
 }
 
+export interface RegisterPendingResponse {
+  message: string;
+  email: string;
+}
+
+export type RegisterResponse = AuthResponse | RegisterPendingResponse;
+
 // === Stocks ===
 
 export interface StockSearchResult {

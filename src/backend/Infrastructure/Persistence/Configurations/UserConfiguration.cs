@@ -15,5 +15,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email).IsUnique();
         builder.HasIndex(u => u.Username).IsUnique();
         builder.Property(u => u.PreferencesJson).HasColumnType("text");
+
+        builder.Property(u => u.IsEmailConfirmed).HasDefaultValue(false);
+        builder.Property(u => u.EmailConfirmationToken).HasMaxLength(36);
+        builder.HasIndex(u => u.EmailConfirmationToken)
+            .IsUnique()
+            .HasFilter("\"EmailConfirmationToken\" IS NOT NULL");
     }
 }

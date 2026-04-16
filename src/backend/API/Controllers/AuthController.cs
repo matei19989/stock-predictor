@@ -20,6 +20,7 @@ public class AuthController : ControllerBase
     [ValidateTurnstile]
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(RegisterPendingResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -28,6 +29,25 @@ public class AuthController : ControllerBase
     {
         var response = await _auth.RegisterAsync(request, cancellationToken);
         return Created(string.Empty, response);
+    }
+
+    [HttpPost("confirm-email")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status410Gone)]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request, CancellationToken cancellationToken)
+    {
+        await _auth.ConfirmEmailAsync(request.Token, cancellationToken);
+        return Ok();
+    }
+
+    [ValidateTurnstile]
+    [HttpPost("resend-confirmation")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest request, CancellationToken cancellationToken)
+    {
+        await _auth.ResendConfirmationAsync(request.Email, cancellationToken);
+        return Ok(new { message = "If an account exists, a confirmation email has been sent." });
     }
 
     [ValidateTurnstile]

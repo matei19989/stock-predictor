@@ -46,6 +46,13 @@ public static class DependencyInjection
         services.AddScoped<IPredictionService, PredictionService>();
         services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 
+        // Email service — only registered when connection string is configured
+        var emailConnectionString = configuration["Email:ConnectionString"];
+        if (!string.IsNullOrWhiteSpace(emailConnectionString))
+        {
+            services.AddSingleton<IEmailService, AzureEmailService>();
+        }
+
         // HTTP context accessor (needed by CorrelationIdHandler)
         services.AddHttpContextAccessor();
         services.AddTransient<CorrelationIdHandler>();

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { ArrowRight } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,6 +31,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const { register: registerUser } = useAuth();
+  const navigate = useNavigate();
   const turnstileRef = useRef<HTMLDivElement>(null);
   const { token: turnstileToken, isReady, resetTurnstile } = useTurnstile(turnstileRef, 'register');
   const {
@@ -42,7 +43,10 @@ export default function RegisterForm() {
   async function onSubmit(data: RegisterFormData) {
     if (!turnstileToken) return;
     try {
-      await registerUser(data.username, data.email, data.password, turnstileToken);
+      const maskedEmail = await registerUser(data.username, data.email, data.password, turnstileToken);
+      if (maskedEmail) {
+        navigate('/confirm-pending', { state: { maskedEmail, rawEmail: data.email } });
+      }
     } catch (err) {
       if (err instanceof ApiException) {
         if (err.status === 409) toast.error('Email or username already taken');
