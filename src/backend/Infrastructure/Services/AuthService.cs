@@ -17,6 +17,7 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _users;
     private readonly IWatchlistService _watchlist;
+    private readonly IEmailService? _email;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthService> _logger;
 
@@ -24,15 +25,17 @@ public class AuthService : IAuthService
         IUserRepository users,
         IWatchlistService watchlist,
         IConfiguration config,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        IEmailService? email = null)
     {
         _users = users;
         _watchlist = watchlist;
         _config = config;
         _logger = logger;
+        _email = email;
     }
 
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<object> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         if (await _users.EmailExistsAsync(request.Email.ToLower(), cancellationToken))
             throw new ConflictException("An account with this email already exists.");
@@ -49,6 +52,17 @@ public class AuthService : IAuthService
             CreatedAt = DateTime.UtcNow
         };
 
+        if (_email is not null)
+        {
+            user.IsEmailConfirmed = false;
+            user.EmailConfirmationToken = Guid.NewGuid().ToString();
+            user.EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+        }
+        else
+        {
+            user.IsEmailConfirmed = true;
+        }
+
         try
         {
             await _users.AddAsync(user, cancellationToken);
@@ -62,6 +76,12 @@ public class AuthService : IAuthService
 
         await _watchlist.SeedDefaultsAsync(user.Id, cancellationToken);
 
+        if (_email is not null)
+        {
+            await _email.SendConfirmationEmailAsync(user.Email, user.EmailConfirmationToken!, cancellationToken);
+            return new RegisterPendingResponse("Check your email to confirm your account.", MaskEmail(user.Email));
+        }
+
         return BuildAuthResponse(user);
     }
 
@@ -73,17 +93,44 @@ public class AuthService : IAuthService
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException();
 
+        if (!user.IsEmailConfirmed)
+            throw new ForbiddenException("Please confirm your email before logging in.");
+
         _logger.LogInformation("User logged in: {Username}", user.Username);
 
         return BuildAuthResponse(user);
     }
 
-    private AuthResponse BuildAuthResponse(User user)
+    public async Task ConfirmEmailAsync(string token, CancellationToken cancellationToken = default)
     {
-        var expiryDays = int.TryParse(_config["Jwt:ExpiryDays"], out var days) ? days : 7;
-        var expiry = DateTime.UtcNow.AddDays(expiryDays);
-        var token = GenerateToken(user, expiry);
-        return new AuthResponse(token, user.Username, user.Email, expiry);
+        var user = await _users.GetByConfirmationTokenAsync(token, cancellationToken)
+            ?? throw new NotFoundException("Invalid confirmation link.");
+
+        if (user.EmailConfirmationTokenExpiresAt < DateTime.UtcNow)
+            throw new AppGoneException("Confirmation link has expired. Please request a new one.");
+
+        user.IsEmailConfirmed = true;
+        user.EmailConfirmationToken = null;
+        user.EmailConfirmationTokenExpiresAt = null;
+        await _users.UpdateAsync(user, cancellationToken);
+
+        _logger.LogInformation("Email confirmed for user: {Username}", user.Username);
+    }
+
+    public async Task ResendConfirmationAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByEmailAsync(email.ToLower(), cancellationToken);
+
+        if (user is null || user.IsEmailConfirmed || _email is null)
+            return;
+
+        user.EmailConfirmationToken = Guid.NewGuid().ToString();
+        user.EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+        await _users.UpdateAsync(user, cancellationToken);
+
+        await _email.SendConfirmationEmailAsync(user.Email, user.EmailConfirmationToken, cancellationToken);
+
+        _logger.LogInformation("Resent confirmation email for user: {Username}", user.Username);
     }
 
     public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
@@ -98,6 +145,14 @@ public class AuthService : IAuthService
         await _users.UpdateAsync(user, cancellationToken);
 
         _logger.LogInformation("Password changed for user: {Username}", user.Username);
+    }
+
+    private AuthResponse BuildAuthResponse(User user)
+    {
+        var expiryDays = int.TryParse(_config["Jwt:ExpiryDays"], out var days) ? days : 7;
+        var expiry = DateTime.UtcNow.AddDays(expiryDays);
+        var token = GenerateToken(user, expiry);
+        return new AuthResponse(token, user.Username, user.Email, expiry);
     }
 
     private string GenerateToken(User user, DateTime expiry)
@@ -122,5 +177,13 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string MaskEmail(string email)
+    {
+        var parts = email.Split('@');
+        if (parts.Length != 2 || parts[0].Length < 2)
+            return email;
+        return $"{parts[0][0]}***@{parts[1]}";
     }
 }

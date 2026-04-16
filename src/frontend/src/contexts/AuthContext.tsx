@@ -16,7 +16,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, turnstileToken: string, rememberMe?: boolean) => Promise<void>;
-  register: (username: string, email: string, password: string, turnstileToken: string) => Promise<void>;
+  register: (username: string, email: string, password: string, turnstileToken: string) => Promise<string | null>;
   logout: () => void;
   /** Called by login/register after a successful API response. */
   setAuthFromResponse: (response: AuthResponse) => void;
@@ -72,10 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate, setAuthFromResponse]);
 
   const register = useCallback(
-    async (username: string, email: string, password: string, turnstileToken: string): Promise<void> => {
+    async (username: string, email: string, password: string, turnstileToken: string): Promise<string | null> => {
       const response = await authService.register(username, email, password, turnstileToken);
-      setAuthFromResponse(response, true);
-      navigate('/dashboard', { replace: true });
+      if ('token' in response) {
+        setAuthFromResponse(response, true);
+        navigate('/dashboard', { replace: true });
+        return null;
+      }
+      return response.email;
     },
     [navigate, setAuthFromResponse]
   );

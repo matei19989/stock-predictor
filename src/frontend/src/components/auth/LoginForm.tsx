@@ -36,7 +36,12 @@ export default function LoginForm() {
     } catch (err) {
       if (err instanceof ApiException) {
         if (err.status === 401) toast.error('Invalid email or password');
-        else if (err.status === 403) toast.error('Verification failed. Please try again.');
+        else if (err.status === 403) {
+          if (err.detail?.toLowerCase().includes('confirm'))
+            toast.error('Please confirm your email before logging in.');
+          else
+            toast.error('Verification failed. Please try again.');
+        }
         else if (err.status === 429) toast.error('Too many attempts. Please try again later.');
         else toast.error(err.detail);
       }

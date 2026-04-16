@@ -9,6 +9,10 @@ public class User
     public DateTime CreatedAt { get; set; }
     public string? PreferencesJson { get; set; }
 
+    public bool IsEmailConfirmed { get; set; }
+    public string? EmailConfirmationToken { get; set; }
+    public DateTime? EmailConfirmationTokenExpiresAt { get; set; }
+
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = [];
     public ICollection<StockVisit> StockVisits { get; set; } = [];
     public ICollection<UserPredictionLog> PredictionLogs { get; set; } = [];
