@@ -2,7 +2,11 @@
 
 Stock market analysis and prediction app. View stock data, manage watchlists, and get ML-powered trading signal recommendations (Strong Sell to Strong Buy).
 
-**Stack:** React + TypeScript | .NET 9 API | Python FastAPI (ML) | PostgreSQL | Cloudflare Turnstile | Azure Communication Services (email)
+**Live demo:** https://frontend.proudsky-6e05d5cc.westeurope.azurecontainerapps.io *(scale-to-zero — first load takes ~10–15s, instant thereafter)*
+
+**Stack:** React + TypeScript | .NET 9 API | Python FastAPI (ML) | PostgreSQL (Neon in prod) | Cloudflare Turnstile | Azure Communication Services (email) | Azure Container Apps + GitHub Actions CI/CD
+
+**Deployment:** see [`docs/deployment.md`](docs/deployment.md) for architecture, cost, rollback, and cold-start mitigation.
 
 ## Prerequisites
 
@@ -122,6 +126,7 @@ cd src/frontend && npm run lint && npm run build
 
 ```
 StockPredictor/
+├── .github/workflows/     # GitHub Actions (build + deploy on push to main)
 ├── src/
 │   ├── frontend/          # React + TypeScript (Vite)
 │   ├── backend/           # .NET 9 Clean Architecture
@@ -133,19 +138,27 @@ StockPredictor/
 ├── tests/
 │   ├── backend/           # xUnit tests
 │   └── ml/                # pytest tests
+├── docs/                  # Deployment + ML progress notes
+├── deploy/azure/          # ARM/YAML specs used during Azure bootstrap
 ├── docker-compose.yml
 └── README.md
 ```
 
-## Environment Variables
+## Environment Variables (local dev)
 
 | Variable | Service | Description |
 |----------|---------|-------------|
 | `JWT_KEY` | Backend | JWT signing key (min 32 chars, required) |
 | `TURNSTILE_SITE_KEY` | Frontend | Cloudflare Turnstile site key (bot protection) |
 | `TURNSTILE_SECRET_KEY` | Backend | Cloudflare Turnstile secret key (bot protection) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | ML | Path to GCP service account JSON (optional) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | ML | Path to GCP service account JSON (optional, for GDELT sentiment) |
 | `VITE_API_URL` | Frontend | Backend API base URL (empty in dev, proxied by Vite) |
 | `Email__ConnectionString` | Backend | Azure Communication Services connection string (empty in dev = auto-confirm) |
 | `Email__FrontendUrl` | Backend | Frontend URL for email confirmation links |
 | `Email__SenderAddress` | Backend | Azure-managed sender email address |
+
+For **production environment variables and secrets** (set as Container Apps secrets + GitHub Actions repository secrets), see [`docs/deployment.md`](docs/deployment.md).
+
+## Deploying changes
+
+Merge a PR into `main`. The GitHub Actions workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) detects which of `src/{backend,ml,frontend}` changed and rebuilds only those images, pushes them to ghcr.io, and updates the corresponding Container App. Changes to `docs/`, `notebooks/`, or `tests/` don't trigger any deploy.
