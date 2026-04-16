@@ -1,7 +1,7 @@
 """FastAPI ML service entry point.
 
-Loads the XGBoost model, label encoder, and training metadata on startup.
-Serves prediction, data, health, and training endpoints.
+Loads XGBoost models for all horizons, label encoder, and training metadata on startup.
+Serves prediction, data, and health endpoints.
 """
 
 import json
@@ -13,7 +13,7 @@ import joblib
 import xgboost as xgb
 from fastapi import FastAPI
 
-from app.routes import data, health, names, predict, train
+from app.routes import data, health, names, predict
 from app.services.sentiment import _build_ticker_mapping
 
 logging.basicConfig(
@@ -24,20 +24,19 @@ logger = logging.getLogger(__name__)
 
 MODELS_DIR = Path(__file__).parent / "models"
 
+HORIZONS = ["3m", "6m", "1y"]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load model artifacts on startup, clean up on shutdown."""
     app.state.model_loaded = False
-    app.state.model = None
-    app.state.model_type = "sklearn"
+    app.state.models = {}
     app.state.label_encoder = None
     app.state.feature_columns = []
     app.state.training_metadata = {}
     app.state.ticker_to_company = {}
 
-    model_path = MODELS_DIR / "xgb_3m_blended.json"
-    model_path_fallback = MODELS_DIR / "xgb_3m_sentiment.joblib"
     encoder_path = MODELS_DIR / "label_encoder.joblib"
     metadata_path = MODELS_DIR / "training_metadata.json"
 
@@ -49,27 +48,34 @@ async def lifespan(app: FastAPI):
         app.state.feature_columns = metadata["sentiment_model"]["feature_columns"]
         logger.info("Loaded training metadata: %d features", len(app.state.feature_columns))
 
-        # Load model — prefer blended ordinal model, fall back to sklearn model
-        if model_path.exists():
-            booster = xgb.Booster()
-            booster.load_model(str(model_path))
-            app.state.model = booster
-            app.state.model_type = "booster"
-            logger.info("Loaded blended ordinal XGBoost model from %s", model_path)
-        elif model_path_fallback.exists():
-            app.state.model = joblib.load(model_path_fallback)
-            app.state.model_type = "sklearn"
-            logger.info("Loaded sklearn XGBoost model from %s (fallback)", model_path_fallback)
-        else:
-            raise FileNotFoundError(f"No model found at {model_path} or {model_path_fallback}")
+        # Load models per horizon
+        for horizon in HORIZONS:
+            blended_path = MODELS_DIR / f"xgb_{horizon}_blended.json"
+            fallback_path = MODELS_DIR / f"xgb_{horizon}_sentiment.joblib"
+
+            if blended_path.exists():
+                booster = xgb.Booster()
+                booster.load_model(str(blended_path))
+                app.state.models[horizon] = {"model": booster, "type": "booster"}
+                logger.info("Loaded blended model for %s from %s", horizon, blended_path)
+            elif fallback_path.exists():
+                app.state.models[horizon] = {"model": joblib.load(fallback_path), "type": "sklearn"}
+                logger.info("Loaded sklearn model for %s from %s (fallback)", horizon, fallback_path)
+            else:
+                app.state.models[horizon] = None
+                logger.warning("No model found for %s — this horizon will return 501", horizon)
 
         app.state.label_encoder = joblib.load(encoder_path)
         logger.info("Loaded label encoder: %s", list(app.state.label_encoder.classes_))
 
-        app.state.model_loaded = True
-        logger.info("All model artifacts loaded successfully")
+        loaded_horizons = [h for h in HORIZONS if app.state.models.get(h) is not None]
+        if loaded_horizons:
+            app.state.model_loaded = True
+            logger.info("Models loaded for horizons: %s", loaded_horizons)
+        else:
+            logger.error("No models loaded — /predict will return 503")
 
-        # Build ticker→company mapping for sentiment (non-blocking)
+        # Build ticker->company mapping for sentiment (non-blocking)
         try:
             app.state.ticker_to_company = _build_ticker_mapping(metadata)
         except Exception as e:
@@ -95,4 +101,3 @@ app.include_router(health.router)
 app.include_router(data.router)
 app.include_router(names.router)
 app.include_router(predict.router)
-app.include_router(train.router)

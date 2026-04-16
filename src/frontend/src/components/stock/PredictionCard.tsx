@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { Brain, ArrowsClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { HORIZON_LABELS } from '@/utils/constants';
 import { formatRelativeTime, formatTimeUntil } from '@/utils/formatters';
 import SignalBadge from '@/components/common/SignalBadge';
@@ -45,28 +39,21 @@ export default function PredictionCard({
               ML Prediction
             </span>
           </div>
-          <TooltipProvider>
             <div className="flex gap-1.5">
               {(['3m', '6m', '1y'] as Horizon[]).map(h => (
-                <Tooltip key={h}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setHorizon(h)}
-                      disabled={h !== '3m'}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] disabled:opacity-40 disabled:cursor-not-allowed ${
-                        horizon === h
-                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
-                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
-                      }`}
-                    >
-                      {HORIZON_LABELS[h]}
-                    </button>
-                  </TooltipTrigger>
-                  {h !== '3m' && <TooltipContent>Coming soon</TooltipContent>}
-                </Tooltip>
+                <button
+                  key={h}
+                  onClick={() => setHorizon(h)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                    horizon === h
+                      ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
+                  }`}
+                >
+                  {HORIZON_LABELS[h]}
+                </button>
               ))}
             </div>
-          </TooltipProvider>
         </div>
 
         {/* Content */}

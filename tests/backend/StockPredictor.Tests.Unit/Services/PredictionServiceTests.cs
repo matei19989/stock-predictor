@@ -74,15 +74,6 @@ public class PredictionServiceTests
     }
 
     [Fact]
-    public async Task GetOrCreateAsync_HorizonNotSupported_ThrowsWithoutCallingMl()
-    {
-        await _sut.Invoking(s => s.GetOrCreateAsync("AAPL", "6m"))
-                  .Should().ThrowAsync<HorizonNotSupportedException>();
-
-        _ml.Verify(m => m.PredictAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
     public async Task GetOrCreateAsync_StockNotFound_ThrowsNotFoundException()
     {
         _stocks.Setup(r => r.GetByTickerAsync("UNKNOWN", It.IsAny<CancellationToken>())).ReturnsAsync((Stock?)null);

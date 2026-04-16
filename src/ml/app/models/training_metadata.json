@@ -811,5 +811,87 @@
     "n_optuna_trials": 150,
     "train_samples": 428713,
     "test_samples": 38918
+  },
+  "sentiment_model_6m": {
+    "horizon": "6m",
+    "feature_columns": [
+      "Price_SMA50_Ratio",
+      "Price_SMA200_Ratio",
+      "Price_EMA20_Ratio",
+      "MACD_Norm",
+      "MACD_Signal_Norm",
+      "MACD_Hist_Norm",
+      "RSI",
+      "Stoch_K",
+      "Stoch_D",
+      "ROC",
+      "BB_Position",
+      "BB_Width",
+      "ATR_Pct",
+      "OBV_Norm",
+      "Vol_SMA_Ratio",
+      "Dist_52w_High",
+      "Dist_52w_Low",
+      "Return_1m",
+      "Return_3m",
+      "sentiment_avg_20d",
+      "sentiment_volume_20d",
+      "sentiment_momentum"
+    ],
+    "n_features": 22,
+    "sentiment_features": [
+      "sentiment_avg_20d",
+      "sentiment_volume_20d",
+      "sentiment_momentum"
+    ],
+    "split_date": "2025-04-01",
+    "results": {
+      "weighted_f1": 0.2744,
+      "accuracy": 0.3058,
+      "mae": 1.3919,
+      "train_samples": 495185,
+      "test_samples": 67634
+    }
+  },
+  "sentiment_model_1y": {
+    "horizon": "1y",
+    "feature_columns": [
+      "Price_SMA50_Ratio",
+      "Price_SMA200_Ratio",
+      "Price_EMA20_Ratio",
+      "MACD_Norm",
+      "MACD_Signal_Norm",
+      "MACD_Hist_Norm",
+      "RSI",
+      "Stoch_K",
+      "Stoch_D",
+      "ROC",
+      "BB_Position",
+      "BB_Width",
+      "ATR_Pct",
+      "OBV_Norm",
+      "Vol_SMA_Ratio",
+      "Dist_52w_High",
+      "Dist_52w_Low",
+      "Return_1m",
+      "Return_3m",
+      "sentiment_avg_20d",
+      "sentiment_volume_20d",
+      "sentiment_momentum"
+    ],
+    "n_features": 22,
+    "sentiment_features": [
+      "sentiment_avg_20d",
+      "sentiment_volume_20d",
+      "sentiment_momentum"
+    ],
+    "split_date": "2024-04-01",
+    "results": {
+      "weighted_f1": 0.2186,
+      "accuracy": 0.2696,
+      "mae": 1.4655,
+      "train_samples": 369434,
+      "test_samples": 130259
+    }
   }
 }
