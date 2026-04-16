@@ -27,7 +27,7 @@ export class ApiException extends Error {
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15_000,
+  timeout: 60_000,
 });
 
 // Attach JWT on every request.
