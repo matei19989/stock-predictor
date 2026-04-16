@@ -1,0 +1,152 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/stockpredictor
+  RG: stockpredictor-rg
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # -----------------------------------------------------------
+  # Detect which services changed, so we skip unnecessary builds.
+  # -----------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      ml: ${{ steps.filter.outputs.ml }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/backend/**'
+            ml:
+              - 'src/ml/**'
+            frontend:
+              - 'src/frontend/**'
+
+  # -----------------------------------------------------------
+  # Backend unit tests — gate deployment on green tests.
+  # -----------------------------------------------------------
+  backend-test:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet test tests/backend/StockPredictor.Tests.Unit/ --verbosity minimal
+
+  # -----------------------------------------------------------
+  # Build + push + deploy each service. Only runs when its
+  # source directory changed on this commit.
+  # -----------------------------------------------------------
+  backend:
+    needs: [changes, backend-test]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: src/backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-backend:latest
+            ${{ env.IMAGE_PREFIX }}-backend:sha-${{ github.sha }}
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - run: |
+          az containerapp update \
+            --name backend \
+            --resource-group ${{ env.RG }} \
+            --image ${{ env.IMAGE_PREFIX }}-backend:sha-${{ github.sha }}
+
+  ml:
+    needs: changes
+    if: needs.changes.outputs.ml == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: src/ml
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-ml:latest
+            ${{ env.IMAGE_PREFIX }}-ml:sha-${{ github.sha }}
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - run: |
+          az containerapp update \
+            --name ml \
+            --resource-group ${{ env.RG }} \
+            --image ${{ env.IMAGE_PREFIX }}-ml:sha-${{ github.sha }}
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: src/frontend
+          push: true
+          build-args: |
+            VITE_TURNSTILE_SITE_KEY=${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
+            ${{ env.IMAGE_PREFIX }}-frontend:sha-${{ github.sha }}
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - run: |
+          az containerapp update \
+            --name frontend \
+            --resource-group ${{ env.RG }} \
+            --image ${{ env.IMAGE_PREFIX }}-frontend:sha-${{ github.sha }}
