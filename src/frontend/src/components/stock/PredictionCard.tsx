@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Brain, ArrowsClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { HORIZON_LABELS } from '@/utils/constants';
@@ -14,6 +13,8 @@ interface PredictionCardProps {
   isLoading: boolean;
   isPredicting: boolean;
   error: string | null;
+  horizon: Horizon;
+  onHorizonChange: (horizon: Horizon) => void;
   onPredict: (horizon: Horizon) => void;
 }
 
@@ -22,10 +23,10 @@ export default function PredictionCard({
   isLoading,
   isPredicting,
   error,
+  horizon,
+  onHorizonChange,
   onPredict,
 }: PredictionCardProps) {
-  const [horizon, setHorizon] = useState<Horizon>('3m');
-
   return (
     <div className="rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06]">
       <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.03] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -43,7 +44,7 @@ export default function PredictionCard({
               {(['3m', '6m', '1y'] as Horizon[]).map(h => (
                 <button
                   key={h}
-                  onClick={() => setHorizon(h)}
+                  onClick={() => onHorizonChange(h)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                     horizon === h
                       ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'

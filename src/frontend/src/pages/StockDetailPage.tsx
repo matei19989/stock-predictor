@@ -11,7 +11,7 @@ import PredictionCard from '@/components/stock/PredictionCard';
 import PriceSummary from '@/components/stock/PriceSummary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import type { StockDetail } from '@/types';
+import type { StockDetail, Horizon } from '@/types';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 
 export default function StockDetailPage() {
@@ -21,6 +21,7 @@ export default function StockDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
+  const [horizon, setHorizon] = useState<Horizon>('3m');
 
   const {
     prediction,
@@ -58,8 +59,15 @@ export default function StockDetailPage() {
     }
 
     void load();
-    void fetchPrediction(ticker);
-  }, [ticker, fetchPrediction, addRecentlyViewed]);
+  }, [ticker, addRecentlyViewed]);
+
+  // Re-fetch the prediction whenever the ticker or the selected horizon changes.
+  // If no prediction exists for the new horizon the hook sets prediction=null and
+  // the card falls back to its "No prediction yet" empty state.
+  useEffect(() => {
+    if (!ticker) return;
+    void fetchPrediction(ticker, horizon);
+  }, [ticker, horizon, fetchPrediction]);
 
   async function handleToggleWatchlist() {
     if (!ticker) return;
@@ -164,6 +172,8 @@ export default function StockDetailPage() {
           isLoading={predIsLoading}
           isPredicting={isPredicting}
           error={predError}
+          horizon={horizon}
+          onHorizonChange={setHorizon}
           onPredict={(h) => predict(ticker!, h)}
         />
         <PriceSummary prices={stock.prices} />
