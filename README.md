@@ -1,4 +1,4 @@
-# StockPredictor
+# Grafynt
 
 Stock market analysis and prediction app. View stock data, manage watchlists, and get ML-powered trading signal recommendations (Strong Sell to Strong Buy).
 
@@ -125,7 +125,7 @@ cd src/frontend && npm run lint && npm run build
 ## Project Structure
 
 ```
-StockPredictor/
+Grafynt/
 ├── .github/workflows/     # GitHub Actions (build + deploy on push to main)
 ├── src/
 │   ├── frontend/          # React + TypeScript (Vite)
