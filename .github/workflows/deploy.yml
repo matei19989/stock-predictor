@@ -3,6 +3,8 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -38,10 +40,57 @@ jobs:
               - 'src/frontend/**'
 
   # -----------------------------------------------------------
+  # Quality gates: lint + typecheck per service. Fail fast so
+  # bad PRs never reach the Docker build/deploy jobs.
+  # -----------------------------------------------------------
+  backend-lint:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      # MSB3277 is a pre-existing project-reference warning on main; excluded so
+      # it doesn't block CI while treating all source warnings as errors.
+      - run: dotnet build src/backend/StockPredictor.sln -warnaserror -p:WarningsNotAsErrors=MSB3277 --verbosity minimal
+
+  frontend-lint:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm run lint
+
+  ml-lint:
+    needs: changes
+    if: needs.changes.outputs.ml == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff==0.5.7
+      - run: ruff check src/ml/app
+
+  # -----------------------------------------------------------
   # Backend unit tests — gate deployment on green tests.
   # -----------------------------------------------------------
   backend-test:
-    needs: changes
+    needs: [changes, backend-lint]
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -52,12 +101,12 @@ jobs:
       - run: dotnet test tests/backend/StockPredictor.Tests.Unit/ --verbosity minimal
 
   # -----------------------------------------------------------
-  # Build + push + deploy each service. Only runs when its
-  # source directory changed on this commit.
+  # Build + push + deploy each service. Only runs on push to
+  # main; PR triggers stop at the quality-gate jobs above.
   # -----------------------------------------------------------
   backend:
-    needs: [changes, backend-test]
-    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, backend-lint, backend-test]
+    if: github.event_name == 'push' && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,8 +136,8 @@ jobs:
             --image ${{ env.IMAGE_PREFIX }}-backend:sha-${{ github.sha }}
 
   ml:
-    needs: changes
-    if: needs.changes.outputs.ml == 'true'
+    needs: [changes, ml-lint]
+    if: github.event_name == 'push' && needs.changes.outputs.ml == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,8 +167,8 @@ jobs:
             --image ${{ env.IMAGE_PREFIX }}-ml:sha-${{ github.sha }}
 
   frontend:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    needs: [changes, frontend-lint]
+    if: github.event_name == 'push' && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
