@@ -46,9 +46,22 @@ api.interceptors.response.use(
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
       const requestUrl = error.config?.url ?? '';
-      const isAuthEndpoint = requestUrl.startsWith('/api/auth/');
+      // Only unauthenticated auth endpoints should bypass the redirect-on-401.
+      // Authenticated endpoints under /api/auth/ (e.g. PUT /api/auth/password)
+      // get a 401 when their JWT is invalid — that's the textbook clear-and-redirect case.
+      const unauthenticatedAuthEndpoints = [
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/confirm-email',
+        '/api/auth/resend-confirmation',
+        '/api/auth/forgot-password',
+        '/api/auth/reset-password',
+      ];
+      const isUnauthenticatedAuthCall = unauthenticatedAuthEndpoints.some(
+        (path) => requestUrl === path || requestUrl.endsWith(path),
+      );
 
-      if (!isAuthEndpoint) {
+      if (!isUnauthenticatedAuthCall) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         sessionStorage.removeItem(TOKEN_KEY);
@@ -58,8 +71,8 @@ api.interceptors.response.use(
           new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })
         );
       }
-      // Auth-endpoint 401s fall through to the generic error path below so
-      // the caller (LoginForm, RegisterForm, …) can render the real detail.
+      // 401s from the unauthenticated auth endpoints fall through so the
+      // calling form (LoginForm, RegisterForm, …) can render the real detail.
     }
 
     const data = error.response?.data;

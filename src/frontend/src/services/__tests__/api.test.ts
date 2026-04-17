@@ -140,4 +140,27 @@ describe('api interceptors', () => {
     expect(err).toBeInstanceOf(ApiException);
     expect(hrefSetter).not.toHaveBeenCalled();
   });
+
+  it('DOES redirect on 401 from PUT /api/auth/password (authenticated endpoint inside /api/auth/)', async () => {
+    localStorage.setItem(TOKEN_KEY, 'expired-jwt');
+    localStorage.setItem(USER_KEY, 'u');
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, set href(v: string) { hrefSetter(v); } },
+    });
+
+    mock.onPut('/api/auth/password').reply(401, {
+      status: 401,
+      title: 'Unauthorized',
+      detail: 'Token expired',
+    });
+
+    await expect(api.put('/api/auth/password', {})).rejects.toBeInstanceOf(ApiException);
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(USER_KEY)).toBeNull();
+    expect(hrefSetter).toHaveBeenCalledWith('/login');
+  });
 });
