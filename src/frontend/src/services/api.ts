@@ -45,14 +45,21 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      sessionStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(USER_KEY);
-      window.location.href = '/login';
-      return Promise.reject(
-        new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })
-      );
+      const requestUrl = error.config?.url ?? '';
+      const isAuthEndpoint = requestUrl.startsWith('/api/auth/');
+
+      if (!isAuthEndpoint) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(USER_KEY);
+        window.location.href = '/login';
+        return Promise.reject(
+          new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })
+        );
+      }
+      // Auth-endpoint 401s fall through to the generic error path below so
+      // the caller (LoginForm, RegisterForm, …) can render the real detail.
     }
 
     const data = error.response?.data;

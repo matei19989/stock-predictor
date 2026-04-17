@@ -94,4 +94,50 @@ describe('api interceptors', () => {
     expect(sessionStorage.getItem(USER_KEY)).toBeNull();
     expect(hrefSetter).toHaveBeenCalledWith('/login');
   });
+
+  it('does NOT redirect and DOES throw ApiException on 401 from /api/auth/login', async () => {
+    localStorage.setItem(TOKEN_KEY, 'pre-existing-unrelated');
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, set href(v: string) { hrefSetter(v); } },
+    });
+
+    mock.onPost('/api/auth/login').reply(401, {
+      status: 401,
+      title: 'Unauthorized',
+      detail: 'Invalid email or password',
+    });
+
+    const err = await api.post('/api/auth/login', {}).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(ApiException);
+    expect((err as ApiException).status).toBe(401);
+    expect((err as ApiException).detail).toBe('Invalid email or password');
+
+    // Storage must NOT be cleared — the user hasn't been logged in yet anyway,
+    // and clearing would force the caller to also re-check session state.
+    expect(localStorage.getItem(TOKEN_KEY)).toBe('pre-existing-unrelated');
+    expect(hrefSetter).not.toHaveBeenCalled();
+  });
+
+  it('does NOT redirect on 401 from /api/auth/register', async () => {
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, set href(v: string) { hrefSetter(v); } },
+    });
+
+    mock.onPost('/api/auth/register').reply(401, {
+      status: 401,
+      title: 'Unauthorized',
+      detail: 'whatever',
+    });
+
+    const err = await api.post('/api/auth/register', {}).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(ApiException);
+    expect(hrefSetter).not.toHaveBeenCalled();
+  });
 });
