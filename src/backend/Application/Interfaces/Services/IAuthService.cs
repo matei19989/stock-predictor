@@ -10,4 +10,6 @@ public interface IAuthService
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
     Task ConfirmEmailAsync(string token, CancellationToken cancellationToken = default);
     Task ResendConfirmationAsync(string email, CancellationToken cancellationToken = default);
+    Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
+    Task ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default);
 }

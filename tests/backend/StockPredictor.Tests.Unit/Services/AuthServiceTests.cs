@@ -275,4 +275,139 @@ public class AuthServiceTests
 
         _email.Verify(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // --- Password Reset ---
+
+    [Fact]
+    public async Task RequestPasswordResetAsync_UnknownEmail_DoesNothing()
+    {
+        var sut = CreateSut(email: _email.Object);
+        _users.Setup(r => r.GetByEmailAsync("nobody@example.com", It.IsAny<CancellationToken>()))
+              .ReturnsAsync((User?)null);
+
+        await sut.RequestPasswordResetAsync("nobody@example.com");
+
+        _email.Verify(e => e.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _users.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RequestPasswordResetAsync_NoEmailService_DoesNothing()
+    {
+        var sutNoEmail = CreateSut(email: null);
+        var user = new User { Id = Guid.NewGuid(), Email = "a@b.com", PasswordHash = "x" };
+        _users.Setup(r => r.GetByEmailAsync("a@b.com", It.IsAny<CancellationToken>()))
+              .ReturnsAsync(user);
+
+        await sutNoEmail.RequestPasswordResetAsync("a@b.com");
+
+        _users.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RequestPasswordResetAsync_KnownEmail_SetsTokenAndSendsEmail()
+    {
+        var sut = CreateSut(email: _email.Object);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "user@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("currentPass123"),
+        };
+        _users.Setup(r => r.GetByEmailAsync("user@example.com", It.IsAny<CancellationToken>()))
+              .ReturnsAsync(user);
+        _users.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _email.Setup(e => e.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await sut.RequestPasswordResetAsync("user@example.com");
+
+        user.PasswordResetToken.Should().NotBeNullOrEmpty();
+        user.PasswordResetTokenExpiresAt.Should().BeAfter(DateTime.UtcNow.AddMinutes(55));
+        user.PasswordResetTokenExpiresAt.Should().BeBefore(DateTime.UtcNow.AddMinutes(65));
+
+        _users.Verify(r => r.UpdateAsync(user, It.IsAny<CancellationToken>()), Times.Once);
+        _email.Verify(e => e.SendPasswordResetEmailAsync(user.Email, user.PasswordResetToken!, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_InvalidToken_ThrowsNotFound()
+    {
+        var sut = CreateSut();
+        _users.Setup(r => r.GetByPasswordResetTokenAsync("bogus", It.IsAny<CancellationToken>()))
+              .ReturnsAsync((User?)null);
+
+        var act = () => sut.ResetPasswordAsync("bogus", "newPass123");
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ExpiredToken_ThrowsGone()
+    {
+        var sut = CreateSut();
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "a@b.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("oldpass"),
+            PasswordResetToken = "tok",
+            PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(-1),
+        };
+        _users.Setup(r => r.GetByPasswordResetTokenAsync("tok", It.IsAny<CancellationToken>()))
+              .ReturnsAsync(user);
+
+        var act = () => sut.ResetPasswordAsync("tok", "newPass123");
+
+        await act.Should().ThrowAsync<AppGoneException>();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_SameAsCurrent_ThrowsConflict()
+    {
+        var sut = CreateSut();
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "a@b.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("samePass123"),
+            PasswordResetToken = "tok",
+            PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30),
+        };
+        _users.Setup(r => r.GetByPasswordResetTokenAsync("tok", It.IsAny<CancellationToken>()))
+              .ReturnsAsync(user);
+
+        var act = () => sut.ResetPasswordAsync("tok", "samePass123");
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_HappyPath_UpdatesHashAndClearsToken()
+    {
+        var sut = CreateSut();
+        var oldHash = BCrypt.Net.BCrypt.HashPassword("oldPass123");
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "a@b.com",
+            PasswordHash = oldHash,
+            PasswordResetToken = "tok",
+            PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30),
+        };
+        _users.Setup(r => r.GetByPasswordResetTokenAsync("tok", It.IsAny<CancellationToken>()))
+              .ReturnsAsync(user);
+        _users.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await sut.ResetPasswordAsync("tok", "brandNewPass123");
+
+        user.PasswordHash.Should().NotBe(oldHash);
+        BCrypt.Net.BCrypt.Verify("brandNewPass123", user.PasswordHash).Should().BeTrue();
+        user.PasswordResetToken.Should().BeNull();
+        user.PasswordResetTokenExpiresAt.Should().BeNull();
+        _users.Verify(r => r.UpdateAsync(user, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

@@ -94,6 +94,14 @@ export default function LoginForm() {
           />
           <span className="text-sm text-gray-400">Remember me</span>
         </label>
+        <div className="flex justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
 
       <div ref={turnstileRef} />
