@@ -16,6 +16,7 @@ public class WatchlistServiceGetAsyncTests
     private readonly Mock<IStockPriceRepository> _prices = new();
     private readonly Mock<IPredictionRepository> _predictions = new();
     private readonly Mock<IStockService> _stockService = new();
+    private readonly Mock<IUserPredictionLogRepository> _userLogRepo = new();
     private readonly WatchlistService _sut;
 
     public WatchlistServiceGetAsyncTests()
@@ -23,7 +24,7 @@ public class WatchlistServiceGetAsyncTests
         _sut = new WatchlistService(
             _watchlist.Object, _stocks.Object, _prices.Object,
             _predictions.Object, _stockService.Object,
-            NullLogger<WatchlistService>.Instance);
+            _userLogRepo.Object, NullLogger<WatchlistService>.Instance);
     }
 
     [Fact]
@@ -153,6 +154,9 @@ public class WatchlistServiceGetAsyncTests
                 }
             });
 
+        _userLogRepo.Setup(r => r.ExistsAsync(userId, stockId, Horizon.ThreeMonths, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         var result = await _sut.GetAsync(userId);
 
         result[0].LatestSignal.Should().Be("Buy");
@@ -186,5 +190,36 @@ public class WatchlistServiceGetAsyncTests
         var result = await _sut.GetAsync(userId);
 
         result[0].Change1dPct.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetAsync_DoesNotExposeAnotherUsersPrediction()
+    {
+        var userB = Guid.NewGuid();
+        var aaplId = Guid.NewGuid();
+        var aapl = new Stock { Id = aaplId, Ticker = "AAPL", Name = "Apple" };
+        var watchlistItemB = new WatchlistItem
+        {
+            Id = Guid.NewGuid(), UserId = userB, StockId = aaplId, AddedAt = DateTime.UtcNow, Stock = aapl,
+        };
+
+        _watchlist.Setup(r => r.GetByUserIdAsync(userB, It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new List<WatchlistItem> { watchlistItemB });
+        _prices.Setup(r => r.GetLastNForStocksAsync(It.IsAny<List<Guid>>(), 2, It.IsAny<CancellationToken>()))
+              .ReturnsAsync(new Dictionary<Guid, List<StockPrice>>());
+        _predictions.Setup(r => r.GetValidForStocksAsync(It.IsAny<List<Guid>>(), Horizon.ThreeMonths, It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(new Dictionary<Guid, Prediction>
+                   {
+                       [aaplId] = new Prediction { StockId = aaplId, Horizon = Horizon.ThreeMonths, Signal = TradingSignal.Buy, Confidence = 0.7 }
+                   });
+        _userLogRepo.Setup(r => r.ExistsAsync(userB, aaplId, Horizon.ThreeMonths, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(false);
+
+        var result = await _sut.GetAsync(userB);
+
+        result.Should().HaveCount(1);
+        result[0].Ticker.Should().Be("AAPL");
+        result[0].LatestSignal.Should().BeNull();
+        result[0].SignalConfidence.Should().BeNull();
     }
 }

@@ -6,4 +6,5 @@ public interface IPredictionService
 {
     Task<PredictionDto> GetOrCreateAsync(string ticker, string horizon, CancellationToken cancellationToken = default);
     Task<PredictionDto?> GetLatestAsync(string ticker, string horizon, CancellationToken cancellationToken = default);
+    Task<PredictionDto?> GetLatestForUserAsync(Guid userId, string ticker, string horizon, CancellationToken cancellationToken = default);
 }
