@@ -131,4 +131,29 @@ public class PredictionServiceTests
         result.Signal.Should().Be("Buy");
         result.Confidence.Should().Be(0.42);
     }
+
+    [Fact]
+    public async Task GetLatestForUserAsync_ReturnsNull_WhenUserLogExistsForDifferentHorizon()
+    {
+        // User predicted AAPL/3m. They request AAPL/6m — no log for that horizon,
+        // so the response must be null even if a shared 6m Prediction exists.
+        var userId = Guid.NewGuid();
+        var stock = new Stock { Id = Guid.NewGuid(), Ticker = "AAPL" };
+        _stocks.Setup(r => r.GetByTickerAsync("AAPL", It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(stock);
+
+        // Log exists for 3m, not 6m.
+        _userLogRepo.Setup(r => r.ExistsAsync(userId, stock.Id, Horizon.ThreeMonths, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(true);
+        _userLogRepo.Setup(r => r.ExistsAsync(userId, stock.Id, Horizon.SixMonths, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(false);
+
+        var result = await _sut.GetLatestForUserAsync(userId, "AAPL", "6m");
+
+        result.Should().BeNull();
+        // Must not touch the shared cache either.
+        _predictions.Verify(
+            r => r.GetLatestAsync(It.IsAny<Guid>(), Horizon.SixMonths, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

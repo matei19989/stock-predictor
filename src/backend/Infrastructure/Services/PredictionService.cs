@@ -74,16 +74,6 @@ public class PredictionService : IPredictionService
         return MapToDto(prediction, ticker);
     }
 
-    public async Task<PredictionDto?> GetLatestAsync(string ticker, string horizon, CancellationToken cancellationToken = default)
-    {
-        var horizonEnum = HorizonExtensions.ParseHorizon(horizon);
-        var stock = await _stocks.GetByTickerAsync(ticker.ToUpper(), cancellationToken);
-        if (stock == null) return null;
-
-        var prediction = await _predictions.GetLatestAsync(stock.Id, horizonEnum, cancellationToken);
-        return prediction == null ? null : MapToDto(prediction, ticker.ToUpper());
-    }
-
     public async Task<PredictionDto?> GetLatestForUserAsync(Guid userId, string ticker, string horizon, CancellationToken cancellationToken = default)
     {
         var horizonEnum = HorizonExtensions.ParseHorizon(horizon);
