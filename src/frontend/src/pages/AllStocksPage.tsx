@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { StockOverview } from '@/types';
 
-const CACHE_KEY = 'sp_all_stocks';
+export const ALL_STOCKS_CACHE_KEY = 'sp_all_stocks';
+const CACHE_KEY = ALL_STOCKS_CACHE_KEY;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function readCache(): StockOverview[] | null {

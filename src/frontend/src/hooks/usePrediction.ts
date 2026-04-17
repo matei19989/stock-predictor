@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { notifySuccess } from '@/utils/notify';
 import * as predictionService from '@/services/predictionService';
 import { ApiException } from '@/services/api';
+import { ALL_STOCKS_CACHE_KEY } from '@/pages/AllStocksPage';
 import type { Prediction, Horizon } from '@/types';
 
 interface UsePredictionReturn {
@@ -44,6 +45,10 @@ export function usePrediction(): UsePredictionReturn {
     try {
       const data = await predictionService.create({ ticker, horizon });
       setPrediction(data);
+      // The all-stocks overview caches latestSignal/signalConfidence per ticker.
+      // Any fresh prediction invalidates that row; drop the whole cache so the
+      // next visit refetches and reflects the new signal.
+      sessionStorage.removeItem(ALL_STOCKS_CACHE_KEY);
       notifySuccess('Prediction generated');
     } catch (err) {
       if (err instanceof ApiException) {
