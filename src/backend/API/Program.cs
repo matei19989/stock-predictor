@@ -131,12 +131,14 @@ try
 
     builder.Services.AddAuthorization();
 
-    // Rate limiting — protect auth endpoints from brute force
+    // Rate limiting — protect auth endpoints from brute force.
+    // RateLimit:Auth:Permit overrides the default (10) — tests set it high.
+    var authPermit = int.TryParse(builder.Configuration["RateLimit:Auth:Permit"], out var p) ? p : 10;
     builder.Services.AddRateLimiter(options =>
     {
         options.AddFixedWindowLimiter("auth", opt =>
         {
-            opt.PermitLimit = 10;
+            opt.PermitLimit = authPermit;
             opt.Window = TimeSpan.FromMinutes(15);
         });
         options.OnRejected = async (context, ct) =>
@@ -257,3 +259,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Expose the implicit Program class to WebApplicationFactory<Program> in integration tests.
+public partial class Program { }
