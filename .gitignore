@@ -35,6 +35,11 @@ env/
 *.pkl
 *.pt
 *.h5
+# Production model binaries must ship with the ML image, so re-include them.
+# Without this, CI builds a /app/app/models/ that's missing e.g. label_encoder.joblib
+# and every /predict returns 503 "Model not loaded".
+!src/ml/app/models/*.joblib
+!src/ml/app/models/*.pkl
 .ipynb_checkpoints/
 
 # === IDE ===
