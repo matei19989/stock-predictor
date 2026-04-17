@@ -1,10 +1,11 @@
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { WatchlistProvider } from '@/contexts/WatchlistContext';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 export default function AppLayout() {
+  const location = useLocation();
   return (
     <WatchlistProvider>
       <div className="relative flex h-screen flex-col overflow-hidden bg-[#07080d]">
@@ -29,7 +30,7 @@ export default function AppLayout() {
         <div className="relative z-10 flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-y-auto px-6 py-6 lg:px-8 lg:py-8">
-            <ErrorBoundary>
+            <ErrorBoundary key={location.pathname}>
               <Outlet />
             </ErrorBoundary>
           </main>
