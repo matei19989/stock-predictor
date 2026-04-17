@@ -49,4 +49,9 @@ public class PredictionRepository : IPredictionRepository
             .GroupBy(p => p.StockId)
             .ToDictionary(g => g.Key, g => g.First());
     }
+
+    public Task<int> DeleteExpiredAsync(DateTime olderThan, CancellationToken cancellationToken = default) =>
+        _db.Predictions
+           .Where(p => p.ExpiresAt < olderThan)
+           .ExecuteDeleteAsync(cancellationToken);
 }

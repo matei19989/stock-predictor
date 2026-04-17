@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StockPredictor.Application.Interfaces.External;
 using StockPredictor.Application.Interfaces.Repositories;
@@ -7,77 +8,99 @@ namespace StockPredictor.Infrastructure.Jobs;
 
 public class RefreshStockPricesJob
 {
-    private readonly IMlServiceClient _ml;
-    private readonly IStockRepository _stocks;
-    private readonly IStockPriceRepository _prices;
-    private readonly IWatchlistRepository _watchlist;
+    private const int MaxDegreeOfParallelism = 5;
+
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RefreshStockPricesJob> _logger;
 
     public RefreshStockPricesJob(
-        IMlServiceClient ml,
-        IStockRepository stocks,
-        IStockPriceRepository prices,
-        IWatchlistRepository watchlist,
+        IServiceScopeFactory scopeFactory,
         ILogger<RefreshStockPricesJob> logger)
     {
-        _ml = ml;
-        _stocks = stocks;
-        _prices = prices;
-        _watchlist = watchlist;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (!await _ml.IsHealthyAsync(cancellationToken))
+        // Health check and ticker list both need scoped services.
+        List<string> tickers;
+        await using (var scope = _scopeFactory.CreateAsyncScope())
         {
-            _logger.LogWarning("ML service unhealthy \u2014 skipping stock price refresh");
-            return;
+            var ml = scope.ServiceProvider.GetRequiredService<IMlServiceClient>();
+            if (!await ml.IsHealthyAsync(cancellationToken))
+            {
+                _logger.LogWarning("ML service unhealthy — skipping stock price refresh");
+                return;
+            }
+
+            var watchlist = scope.ServiceProvider.GetRequiredService<IWatchlistRepository>();
+            tickers = await watchlist.GetAllWatchedTickersAsync(cancellationToken);
         }
 
-        var tickers = await _watchlist.GetAllWatchedTickersAsync(cancellationToken);
-        _logger.LogInformation("Refreshing prices for {Count} watched tickers", tickers.Count);
+        _logger.LogInformation("Refreshing prices for {Count} watched tickers (concurrency {Concurrency})",
+            tickers.Count, MaxDegreeOfParallelism);
 
         var totalInserted = 0;
 
-        foreach (var ticker in tickers)
-        {
-            try
+        await Parallel.ForEachAsync(
+            tickers,
+            new ParallelOptions
             {
-                var data = await _ml.GetStockDataAsync(ticker, "1mo", cancellationToken);
-                if (data == null)
-                {
-                    _logger.LogWarning("No data returned for {Ticker}", ticker);
-                    continue;
-                }
-
-                var stock = await _stocks.GetByTickerAsync(ticker, cancellationToken);
-                if (stock == null) continue;
-
-                var newPrices = StockPriceMapper.ToEntities(stock.Id, data.Data);
-                var inserted = await _prices.UpsertRangeAsync(stock.Id, newPrices, cancellationToken);
-                totalInserted += inserted;
-
-                stock.LastUpdatedAt = DateTime.UtcNow;
-                // Backfill name/sector if missing
-                if (string.IsNullOrEmpty(stock.Name) && !string.IsNullOrEmpty(data.Name))
-                {
-                    stock.Name = data.Name;
-                    _logger.LogInformation("Backfilled name for {Ticker}: {Name}", ticker, data.Name);
-                }
-                if (string.IsNullOrEmpty(stock.Sector) && !string.IsNullOrEmpty(data.Sector))
-                {
-                    stock.Sector = data.Sector;
-                }
-                await _stocks.UpdateAsync(stock, cancellationToken);
-            }
-            catch (Exception ex)
+                MaxDegreeOfParallelism = MaxDegreeOfParallelism,
+                CancellationToken = cancellationToken
+            },
+            async (ticker, ct) =>
             {
-                _logger.LogError(ex, "Failed to refresh prices for {Ticker}", ticker);
-            }
-        }
+                var inserted = await RefreshTickerAsync(ticker, ct);
+                Interlocked.Add(ref totalInserted, inserted);
+            });
 
         _logger.LogInformation("Price refresh complete: {Inserted} new rows across {Count} tickers",
             totalInserted, tickers.Count);
+    }
+
+    private async Task<int> RefreshTickerAsync(string ticker, CancellationToken cancellationToken)
+    {
+        // Each ticker runs in its own scope so every parallel branch gets its own DbContext.
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var ml = scope.ServiceProvider.GetRequiredService<IMlServiceClient>();
+        var stocks = scope.ServiceProvider.GetRequiredService<IStockRepository>();
+        var prices = scope.ServiceProvider.GetRequiredService<IStockPriceRepository>();
+
+        try
+        {
+            var data = await ml.GetStockDataAsync(ticker, "1mo", cancellationToken);
+            if (data == null)
+            {
+                _logger.LogWarning("No data returned for {Ticker}", ticker);
+                return 0;
+            }
+
+            var stock = await stocks.GetByTickerAsync(ticker, cancellationToken);
+            if (stock == null) return 0;
+
+            var newPrices = StockPriceMapper.ToEntities(stock.Id, data.Data);
+            var inserted = await prices.UpsertRangeAsync(stock.Id, newPrices, cancellationToken);
+
+            stock.LastUpdatedAt = DateTime.UtcNow;
+            if (string.IsNullOrEmpty(stock.Name) && !string.IsNullOrEmpty(data.Name))
+            {
+                stock.Name = data.Name;
+                _logger.LogInformation("Backfilled name for {Ticker}: {Name}", ticker, data.Name);
+            }
+            if (string.IsNullOrEmpty(stock.Sector) && !string.IsNullOrEmpty(data.Sector))
+            {
+                stock.Sector = data.Sector;
+            }
+            await stocks.UpdateAsync(stock, cancellationToken);
+
+            return inserted;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh prices for {Ticker}", ticker);
+            return 0;
+        }
     }
 }

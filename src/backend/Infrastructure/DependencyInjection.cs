@@ -81,9 +81,10 @@ public static class DependencyInjection
                 c.UseNpgsqlConnection(connectionString)));
         services.AddHangfireServer();
 
-        // Seeder and job
+        // Seeder and jobs
         services.AddScoped<DataSeeder>();
         services.AddScoped<RefreshStockPricesJob>();
+        services.AddScoped<CleanupExpiredPredictionsJob>();
 
         return services;
     }

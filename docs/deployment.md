@@ -50,6 +50,7 @@ Set via `az containerapp update --set-env-vars` and secrets via `az containerapp
 | `MlService__BaseUrl` | env | `http://ml` (short hostname, same env) |
 | `Cors__AllowedOrigins__0` | env | Frontend URL |
 | `Hangfire__RefreshCron` | env | `0 */6 * * *` (every 6h) |
+| `Hangfire__CleanupCron` | env | `0 3 * * *` (daily 03:00 UTC — deletes expired predictions) |
 | `ASPNETCORE_ENVIRONMENT` | env | `Production` |
 
 Secrets are rotated with `az containerapp secret set`; env vars with `az containerapp update --set-env-vars KEY=value`. Either operation requires a container restart to take effect; scale-to-zero handles this automatically on the next request.
@@ -150,6 +151,40 @@ Or just redeploy an older SHA tag:
 az containerapp update --name backend --resource-group stockpredictor-rg \
   --image ghcr.io/matei19989/stockpredictor-backend:sha-<older-commit>
 ```
+
+## Health check
+
+`GET /api/health` returns a JSON report with `status` (Healthy / Degraded / Unhealthy) and per-check entries for `database` (Neon reachability via EF Core) and `ml` (calls the ML service `/health`). The endpoint is anonymous so it can be used by Azure Container Apps probes, uptime monitoring, and smoke tests after deploy.
+
+```bash
+curl https://backend.proudsky-6e05d5cc.westeurope.azurecontainerapps.io/api/health
+```
+
+A `Degraded` status means one dependency is reachable but not ready (e.g. ML responded but has not finished loading models). `Unhealthy` means a dependency is unreachable — fix before putting traffic on the revision.
+
+## Hangfire dashboard
+
+The dashboard is mapped at `/hangfire` only when `ASPNETCORE_ENVIRONMENT=Development` and is guarded by `LocalRequestsOnlyAuthorizationFilter`. In Production it is intentionally not exposed — job state is visible via Serilog logs and the Postgres tables Hangfire writes to.
+
+## Background jobs
+
+| Job | Cron | What it does |
+|---|---|---|
+| `refresh-stock-prices` | `Hangfire:RefreshCron` (prod `0 */6 * * *`) | Fetches 1-month OHLCV from the ML service for all watched tickers, upserts into `StockPrices`. Parallelised with a max concurrency of 5 — each ticker runs in its own DI scope so the parallel branches don't share a `DbContext`. |
+| `cleanup-expired-predictions` | `Hangfire:CleanupCron` (default `0 3 * * *`) | Deletes `Predictions` rows where `ExpiresAt < UtcNow` so the cache doesn't grow unbounded. `UserPredictionLog` is preserved for analytics. |
+
+## Retraining the ML models
+
+All three models (3m, 6m, 1y) are XGBoost boosters trained offline in notebooks and served from files baked into the `ml` container image. There is no in-service retraining — the retrain cadence is **manual** and driven by thesis milestones, not a schedule.
+
+To refresh a model:
+
+1. Rerun the relevant notebook (usually `notebooks/09_model_improvements.ipynb` for 3m or `notebooks/10_multi_horizon_training.ipynb` for 6m/1y). The notebook saves new `xgb_<horizon>_blended.json` files and updates `src/ml/app/models/training_metadata.json`.
+2. Commit the updated `.json` files + `training_metadata.json`. Anything under `notebooks/data/*.parquet` stays out of git.
+3. Push to `main`. The `ml` path filter triggers a rebuild that bakes the new models into `ghcr.io/matei19989/stockpredictor-ml:sha-<commit>` and deploys.
+4. Confirm the new revision picked them up with `curl https://backend.proudsky-.../api/health` (should still report `Healthy` for `ml`) or check the ML logs for the model-loaded line on startup.
+
+If you need to roll back a model without a full revert, just redeploy an older SHA tag for the `ml` container app (see Rollback above).
 
 ## Operational gotchas learned the hard way
 
