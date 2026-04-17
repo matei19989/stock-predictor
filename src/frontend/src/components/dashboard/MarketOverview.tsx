@@ -1,4 +1,5 @@
 import { TrendUp, TrendDown, Minus } from '@phosphor-icons/react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/utils/cn';
 import { formatPct } from '@/utils/formatters';
 import { SIGNAL_ORDER } from '@/utils/constants';
@@ -10,7 +11,28 @@ interface MarketOverviewProps {
 }
 
 export default function MarketOverview({ items, isLoading }: MarketOverviewProps) {
-  if (isLoading || items.length === 0) return null;
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 stagger-children">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-slide-up">
+            <div className="rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06]">
+              <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.03] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <Skeleton className="mb-4 h-3 w-28 rounded bg-white/[0.04]" />
+                <div className="space-y-2.5">
+                  <Skeleton className="h-4 w-full rounded bg-white/[0.04]" />
+                  <Skeleton className="h-4 w-5/6 rounded bg-white/[0.04]" />
+                  <Skeleton className="h-4 w-2/3 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) return null;
 
   const gainers = [...items]
     .filter((i) => i.change1dPct != null && i.change1dPct > 0)
