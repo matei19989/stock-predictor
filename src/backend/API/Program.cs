@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -6,9 +7,11 @@ using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
+using StockPredictor.API.HealthChecks;
 using StockPredictor.API.Middleware;
 using StockPredictor.Application.Validators;
 using StockPredictor.Infrastructure;
@@ -63,6 +66,20 @@ try
     var jwtKey = builder.Configuration["Jwt:Key"];
     if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32 || jwtKey.StartsWith("CHANGE_ME"))
         throw new InvalidOperationException("Jwt:Key must be a secure random string of at least 32 characters.");
+
+    // Email confirmation must be wired in Production. Without it, registration silently auto-confirms.
+    if (builder.Environment.IsProduction() &&
+        string.IsNullOrWhiteSpace(builder.Configuration["Email:ConnectionString"]))
+    {
+        throw new InvalidOperationException(
+            "Email:ConnectionString must be configured in Production. " +
+            "Empty in Production would silently auto-confirm registrations, bypassing the email-verification gate.");
+    }
+
+    // Health checks: database reachability + ML service availability.
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<AppDbContext>("database")
+        .AddCheck<MlServiceHealthCheck>("ml");
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -185,6 +202,28 @@ try
     app.UseAuthorization();
     app.MapControllers();
 
+    app.MapHealthChecks("/api/health", new HealthCheckOptions
+    {
+        ResponseWriter = async (ctx, report) =>
+        {
+            ctx.Response.ContentType = "application/json";
+            var payload = new
+            {
+                status = report.Status.ToString(),
+                totalDuration = report.TotalDuration.TotalMilliseconds,
+                checks = report.Entries.ToDictionary(
+                    kv => kv.Key,
+                    kv => new
+                    {
+                        status = kv.Value.Status.ToString(),
+                        durationMs = kv.Value.Duration.TotalMilliseconds,
+                        description = kv.Value.Description
+                    })
+            };
+            await ctx.Response.WriteAsJsonAsync(payload);
+        }
+    });
+
     // Apply migrations and seed default stocks
     using (var scope = app.Services.CreateScope())
     {
@@ -195,12 +234,17 @@ try
         await seeder.SeedAsync();
     }
 
-    // Register recurring Hangfire job
+    // Register recurring Hangfire jobs
     var jobManager = app.Services.GetRequiredService<IRecurringJobManager>();
     jobManager.AddOrUpdate<RefreshStockPricesJob>(
         "refresh-stock-prices",
         job => job.ExecuteAsync(CancellationToken.None),
         builder.Configuration["Hangfire:RefreshCron"] ?? "0 * * * *"
+    );
+    jobManager.AddOrUpdate<CleanupExpiredPredictionsJob>(
+        "cleanup-expired-predictions",
+        job => job.ExecuteAsync(CancellationToken.None),
+        builder.Configuration["Hangfire:CleanupCron"] ?? "0 3 * * *"
     );
 
     await app.RunAsync();
