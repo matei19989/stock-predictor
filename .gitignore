@@ -69,3 +69,9 @@ credentials/
 *.log
 logs/
 *.parquet
+
+# === Local dev artifacts (screenshots, MCP traces) — never commit ===
+.playwright-mcp/
+**/.playwright-mcp/
+screenshots/
+**/screenshots/

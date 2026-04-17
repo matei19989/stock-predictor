@@ -103,6 +103,17 @@ export interface Prediction {
 export type TradingSignal = 'Strong Sell' | 'Sell' | 'Hold' | 'Buy' | 'Strong Buy';
 export type Horizon = '3m' | '6m' | '1y';
 
+export interface UserPrediction {
+  ticker: string;
+  name: string | null;
+  horizon: Horizon;
+  signal: TradingSignal | null;
+  confidence: number | null;
+  predictedAt: string;
+  expiresAt: string | null;
+  isExpired: boolean;
+}
+
 // === Preferences ===
 
 export interface UserPreferences {

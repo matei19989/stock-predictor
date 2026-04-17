@@ -36,4 +36,12 @@ public class UserPredictionLogRepository : IUserPredictionLogRepository
 
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<List<UserPredictionLog>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _db.UserPredictionLogs
+           .AsNoTracking()
+           .Include(p => p.Stock)
+           .Where(p => p.UserId == userId)
+           .OrderByDescending(p => p.RequestedAt)
+           .ToListAsync(cancellationToken);
 }

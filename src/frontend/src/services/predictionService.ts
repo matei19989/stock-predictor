@@ -1,6 +1,6 @@
 import api from './api';
 import { ApiException } from './api';
-import type { PredictRequest, Prediction } from '@/types';
+import type { PredictRequest, Prediction, UserPrediction } from '@/types';
 
 export async function create(request: PredictRequest): Promise<Prediction> {
   const { data } = await api.post<Prediction>('/api/predictions', request);
@@ -27,4 +27,9 @@ export async function getLatest(
 export async function getUserPredictionCount(): Promise<number> {
   const { data } = await api.get<{ count: number }>('/api/predictions/user/count');
   return data.count;
+}
+
+export async function getUserPredicted(): Promise<UserPrediction[]> {
+  const { data } = await api.get<UserPrediction[]>('/api/predictions/user/predicted');
+  return data;
 }

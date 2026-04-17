@@ -87,4 +87,12 @@ public class PredictionsController : ControllerBase
         var count = await _predictionLog.CountByUserAsync(GetUserId(), cancellationToken);
         return Ok(new { count });
     }
+
+    [HttpGet("user/predicted")]
+    [ProducesResponseType(typeof(IEnumerable<UserPredictionDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUserPredicted(CancellationToken cancellationToken)
+    {
+        var result = await _predictions.GetUserPredictedAsync(GetUserId(), cancellationToken);
+        return Ok(result);
+    }
 }
