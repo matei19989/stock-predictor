@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { toast } from 'sonner';
+import { toast, sonnerToast } from '@/lib/toast';
 import {
-  ArrowRight, User, Lock, Moon, Sun, ChartLine,
+  ArrowRight, User, Lock, Bell, BellSlash, ChartLine,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -38,6 +38,7 @@ function AnimatedToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () 
           ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_16px_rgba(168,85,247,0.3)]'
           : 'bg-white/[0.08]'
       }`}
+      aria-label={enabled ? 'Disable toast notifications' : 'Enable toast notifications'}
     >
       <span
         className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -45,9 +46,9 @@ function AnimatedToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () 
         }`}
       >
         {enabled ? (
-          <Moon size={10} weight="bold" className="text-purple-600" />
+          <Bell size={10} weight="bold" className="text-purple-600" />
         ) : (
-          <Sun size={10} weight="bold" className="text-gray-400" />
+          <BellSlash size={10} weight="bold" className="text-gray-400" />
         )}
       </span>
     </button>
@@ -85,11 +86,11 @@ export default function SettingsPage() {
     localStorage.setItem('sp_notifications', String(next));
     try {
       await updatePreferences({ notificationsEnabled: next, defaultChartRange: defaultRange });
-      toast.success(next ? 'Notifications enabled' : 'Notifications disabled');
+      sonnerToast.success(next ? 'Notifications enabled' : 'Notifications disabled');
     } catch {
       setNotifications(prev);
       localStorage.setItem('sp_notifications', String(prev));
-      toast.error('Failed to update preference');
+      sonnerToast.error('Failed to update preference');
     }
   }
 
@@ -197,7 +198,7 @@ export default function SettingsPage() {
       <div className="rounded-[1.5rem] bg-white/[0.03] p-1 ring-1 ring-white/[0.06]">
         <div className="rounded-[calc(1.5rem-0.25rem)] bg-white/[0.03] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           <div className="px-6 pt-5 pb-3 border-b border-white/[0.06] flex items-center gap-2">
-            <Moon size={14} weight="light" className="text-purple-400" />
+            <Bell size={14} weight="light" className="text-purple-400" />
             <span className="font-heading text-sm font-semibold tracking-[-0.02em]">Preferences</span>
           </div>
           <div className="px-6 py-5 space-y-5">

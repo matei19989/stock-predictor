@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { notifySuccess } from '@/utils/notify';
 import * as watchlistService from '@/services/watchlistService';
 import type { WatchlistItem } from '@/types';
