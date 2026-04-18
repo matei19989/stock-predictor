@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { CheckCircle, XCircle, Clock, ArrowLeft, PaperPlaneTilt } from '@phosphor-icons/react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';

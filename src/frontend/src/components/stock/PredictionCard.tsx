@@ -44,8 +44,10 @@ export default function PredictionCard({
               {(['3m', '6m', '1y'] as Horizon[]).map(h => (
                 <button
                   key={h}
+                  type="button"
                   onClick={() => onHorizonChange(h)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  disabled={isPredicting}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] disabled:opacity-40 disabled:cursor-not-allowed ${
                     horizon === h
                       ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
                       : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
