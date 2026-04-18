@@ -64,4 +64,45 @@ public class AzureEmailService : IEmailService
             throw;
         }
     }
+
+    public async Task SendPasswordResetEmailAsync(string toEmail, string resetToken, CancellationToken ct = default)
+    {
+        var resetUrl = $"{_frontendUrl.TrimEnd('/')}/reset-password?token={resetToken}";
+
+        var htmlBody = $"""
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; color: #1a1a2e;">
+                <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 16px;">Reset your password</h1>
+                <p style="font-size: 15px; line-height: 1.6; color: #555; margin-bottom: 32px;">
+                    Someone (hopefully you) asked to reset the password on your Grafynt account.
+                    Click the button below to pick a new one. This link expires in 1 hour.
+                </p>
+                <a href="{resetUrl}"
+                   style="display: inline-block; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                    Reset password
+                </a>
+                <p style="font-size: 13px; line-height: 1.5; color: #888; margin-top: 32px;">
+                    If you didn't request a password reset, you can safely ignore this email — your password won't change.
+                </p>
+            </div>
+            """;
+
+        var message = new EmailMessage(
+            senderAddress: _senderAddress,
+            recipientAddress: toEmail,
+            content: new EmailContent("Reset your password — Grafynt")
+            {
+                Html = htmlBody
+            });
+
+        try
+        {
+            await _client.SendAsync(Azure.WaitUntil.Started, message, ct);
+            _logger.LogInformation("Password reset email sent to {Email}", toEmail);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send password reset email to {Email}", toEmail);
+            throw;
+        }
+    }
 }

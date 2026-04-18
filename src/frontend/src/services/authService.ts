@@ -35,3 +35,11 @@ export async function confirmEmail(token: string): Promise<void> {
 export async function resendConfirmation(email: string, turnstileToken: string): Promise<void> {
   await api.post('/api/auth/resend-confirmation', { email, turnstileToken });
 }
+
+export async function forgotPassword(email: string, turnstileToken: string): Promise<void> {
+  await api.post('/api/auth/forgot-password', { email, turnstileToken });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await api.post('/api/auth/reset-password', { token, newPassword });
+}

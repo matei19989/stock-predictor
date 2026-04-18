@@ -20,6 +20,9 @@ public class UserRepository : IUserRepository
     public Task<User?> GetByConfirmationTokenAsync(string token, CancellationToken cancellationToken = default) =>
         _db.Users.FirstOrDefaultAsync(u => u.EmailConfirmationToken == token, cancellationToken);
 
+    public Task<User?> GetByPasswordResetTokenAsync(string token, CancellationToken cancellationToken = default) =>
+        _db.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token, cancellationToken);
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _db.Users.AddAsync(user, cancellationToken);

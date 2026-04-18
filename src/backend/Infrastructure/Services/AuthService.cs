@@ -147,6 +147,42 @@ public class AuthService : IAuthService
         _logger.LogInformation("Password changed for user: {Username}", user.Username);
     }
 
+    public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByEmailAsync(email.ToLower(), cancellationToken);
+
+        // Info-leak prevention: silent no-op when user doesn't exist or email service is off.
+        if (user is null || _email is null)
+            return;
+
+        user.PasswordResetToken = Guid.NewGuid().ToString();
+        user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+        await _users.UpdateAsync(user, cancellationToken);
+
+        await _email.SendPasswordResetEmailAsync(user.Email, user.PasswordResetToken, cancellationToken);
+
+        _logger.LogInformation("Password reset requested for {Username}", user.Username);
+    }
+
+    public async Task ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByPasswordResetTokenAsync(token, cancellationToken)
+            ?? throw new NotFoundException("Invalid or already-used reset link.");
+
+        if (user.PasswordResetTokenExpiresAt < DateTime.UtcNow)
+            throw new AppGoneException("Reset link has expired. Please request a new one.");
+
+        if (BCrypt.Net.BCrypt.Verify(newPassword, user.PasswordHash))
+            throw new ConflictException("New password must be different from the current password.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiresAt = null;
+        await _users.UpdateAsync(user, cancellationToken);
+
+        _logger.LogInformation("Password reset for {Username}", user.Username);
+    }
+
     private AuthResponse BuildAuthResponse(User user)
     {
         var expiryDays = int.TryParse(_config["Jwt:ExpiryDays"], out var days) ? days : 7;

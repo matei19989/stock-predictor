@@ -13,6 +13,9 @@ public class User
     public string? EmailConfirmationToken { get; set; }
     public DateTime? EmailConfirmationTokenExpiresAt { get; set; }
 
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetTokenExpiresAt { get; set; }
+
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = [];
     public ICollection<StockVisit> StockVisits { get; set; } = [];
     public ICollection<UserPredictionLog> PredictionLogs { get; set; } = [];

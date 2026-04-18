@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
 import api from '../api';
 import * as authService from '../authService';
+import { forgotPassword, resetPassword } from '../authService';
 
 describe('authService', () => {
   let mock: MockAdapter;
@@ -73,5 +74,25 @@ describe('authService', () => {
 
     const body = JSON.parse(mock.history.put[0].data);
     expect(body).toEqual({ currentPassword: 'old', newPassword: 'new' });
+  });
+
+  it('forgotPassword posts to /api/auth/forgot-password', async () => {
+    mock.onPost('/api/auth/forgot-password').reply(200, { message: 'ok' });
+    await expect(
+      forgotPassword('a@b.com', 'tt-token'),
+    ).resolves.toBeUndefined();
+    const body = JSON.parse(mock.history.post[0].data);
+    expect(body.email).toBe('a@b.com');
+    expect(body.turnstileToken).toBe('tt-token');
+  });
+
+  it('resetPassword posts to /api/auth/reset-password', async () => {
+    mock.onPost('/api/auth/reset-password').reply(200);
+    await expect(
+      resetPassword('tok', 'newPass123'),
+    ).resolves.toBeUndefined();
+    const body = JSON.parse(mock.history.post[0].data);
+    expect(body.token).toBe('tok');
+    expect(body.newPassword).toBe('newPass123');
   });
 });

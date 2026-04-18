@@ -3,27 +3,35 @@ using StockPredictor.Application.Interfaces.Services;
 
 namespace StockPredictor.Tests.Integration.Fixtures;
 
-/// <summary>
-/// Test double for IEmailService that captures every confirmation email
-/// instead of dispatching it. Tests inspect Captured to assert the token
-/// that would have been emailed to the user.
-/// </summary>
+public enum EmailKind { Confirmation, PasswordReset }
+
+public record CapturedEmail(string Email, string Token, DateTime SentAt, EmailKind Kind);
+
 public class FakeEmailService : IEmailService
 {
-    public record CapturedEmail(string Email, string Token, DateTime SentAt);
-
     public ConcurrentBag<CapturedEmail> Captured { get; } = new();
 
-    public Task SendConfirmationEmailAsync(string email, string token, CancellationToken cancellationToken = default)
+    public Task SendConfirmationEmailAsync(string toEmail, string confirmationToken, CancellationToken ct = default)
     {
-        Captured.Add(new CapturedEmail(email, token, DateTime.UtcNow));
+        Captured.Add(new CapturedEmail(toEmail, confirmationToken, DateTime.UtcNow, EmailKind.Confirmation));
+        return Task.CompletedTask;
+    }
+
+    public Task SendPasswordResetEmailAsync(string toEmail, string resetToken, CancellationToken ct = default)
+    {
+        Captured.Add(new CapturedEmail(toEmail, resetToken, DateTime.UtcNow, EmailKind.PasswordReset));
         return Task.CompletedTask;
     }
 
     public void Clear() => Captured.Clear();
 
+    // Back-compat for existing tests: defaults to Confirmation.
     public CapturedEmail? LastFor(string email) =>
-        Captured.Where(c => c.Email.Equals(email, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(c => c.SentAt)
-                .FirstOrDefault();
+        LastFor(email, EmailKind.Confirmation);
+
+    public CapturedEmail? LastFor(string email, EmailKind kind) =>
+        Captured
+            .Where(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase) && e.Kind == kind)
+            .OrderByDescending(e => e.SentAt)
+            .FirstOrDefault();
 }
