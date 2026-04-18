@@ -36,7 +36,7 @@ public class AzureEmailService : IEmailService
                     This link expires in 1 hour.
                 </p>
                 <a href="{confirmUrl}"
-                   style="display: inline-block; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                   style="display: inline-block; background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; mso-padding-alt: 0; mso-line-height-rule: exactly;">
                     Confirm Email
                 </a>
                 <p style="font-size: 13px; line-height: 1.5; color: #888; margin-top: 32px;">
@@ -77,7 +77,7 @@ public class AzureEmailService : IEmailService
                     Click the button below to pick a new one. This link expires in 1 hour.
                 </p>
                 <a href="{resetUrl}"
-                   style="display: inline-block; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                   style="display: inline-block; background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; mso-padding-alt: 0; mso-line-height-rule: exactly;">
                     Reset password
                 </a>
                 <p style="font-size: 13px; line-height: 1.5; color: #888; margin-top: 32px;">
