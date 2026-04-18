@@ -45,14 +45,34 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      sessionStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(USER_KEY);
-      window.location.href = '/login';
-      return Promise.reject(
-        new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })
+      const requestUrl = error.config?.url ?? '';
+      // Only unauthenticated auth endpoints should bypass the redirect-on-401.
+      // Authenticated endpoints under /api/auth/ (e.g. PUT /api/auth/password)
+      // get a 401 when their JWT is invalid — that's the textbook clear-and-redirect case.
+      const unauthenticatedAuthEndpoints = [
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/confirm-email',
+        '/api/auth/resend-confirmation',
+        '/api/auth/forgot-password',
+        '/api/auth/reset-password',
+      ];
+      const isUnauthenticatedAuthCall = unauthenticatedAuthEndpoints.some(
+        (path) => requestUrl === path || requestUrl.endsWith(path),
       );
+
+      if (!isUnauthenticatedAuthCall) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(USER_KEY);
+        window.location.href = '/login';
+        return Promise.reject(
+          new ApiException({ status: 401, title: 'Unauthorized', detail: 'Session expired' })
+        );
+      }
+      // 401s from the unauthenticated auth endpoints fall through so the
+      // calling form (LoginForm, RegisterForm, …) can render the real detail.
     }
 
     const data = error.response?.data;
