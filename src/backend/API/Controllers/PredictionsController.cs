@@ -76,7 +76,7 @@ public class PredictionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLatest(string ticker, [FromQuery] string horizon = "3m", CancellationToken cancellationToken = default)
     {
-        var result = await _predictions.GetLatestAsync(ticker.ToUpper(), horizon, cancellationToken);
+        var result = await _predictions.GetLatestForUserAsync(GetUserId(), ticker.ToUpper(), horizon, cancellationToken);
         return result == null ? NotFound() : Ok(result);
     }
 

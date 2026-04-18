@@ -16,6 +16,7 @@ public class WatchlistServiceTests
     private readonly Mock<IStockPriceRepository> _prices = new();
     private readonly Mock<IPredictionRepository> _predictions = new();
     private readonly Mock<IStockService> _stockService = new();
+    private readonly Mock<IUserPredictionLogRepository> _userLogRepo = new();
     private readonly WatchlistService _sut;
 
     public WatchlistServiceTests()
@@ -23,7 +24,7 @@ public class WatchlistServiceTests
         _sut = new WatchlistService(
             _watchlist.Object, _stocks.Object, _prices.Object,
             _predictions.Object, _stockService.Object,
-            NullLogger<WatchlistService>.Instance);
+            _userLogRepo.Object, NullLogger<WatchlistService>.Instance);
     }
 
     [Fact]

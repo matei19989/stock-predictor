@@ -16,17 +16,20 @@ public class PredictionService : IPredictionService
     private readonly IPredictionRepository _predictions;
     private readonly IStockRepository _stocks;
     private readonly IMlServiceClient _ml;
+    private readonly IUserPredictionLogRepository _userLogs;
     private readonly ILogger<PredictionService> _logger;
 
     public PredictionService(
         IPredictionRepository predictions,
         IStockRepository stocks,
         IMlServiceClient ml,
+        IUserPredictionLogRepository userLogs,
         ILogger<PredictionService> logger)
     {
         _predictions = predictions;
         _stocks = stocks;
         _ml = ml;
+        _userLogs = userLogs;
         _logger = logger;
     }
 
@@ -71,14 +74,19 @@ public class PredictionService : IPredictionService
         return MapToDto(prediction, ticker);
     }
 
-    public async Task<PredictionDto?> GetLatestAsync(string ticker, string horizon, CancellationToken cancellationToken = default)
+    public async Task<PredictionDto?> GetLatestForUserAsync(Guid userId, string ticker, string horizon, CancellationToken cancellationToken = default)
     {
         var horizonEnum = HorizonExtensions.ParseHorizon(horizon);
-        var stock = await _stocks.GetByTickerAsync(ticker.ToUpper(), cancellationToken);
+        var upperTicker = ticker.ToUpper();
+
+        var stock = await _stocks.GetByTickerAsync(upperTicker, cancellationToken);
         if (stock == null) return null;
 
+        var userHasLog = await _userLogs.ExistsAsync(userId, stock.Id, horizonEnum, cancellationToken);
+        if (!userHasLog) return null;
+
         var prediction = await _predictions.GetLatestAsync(stock.Id, horizonEnum, cancellationToken);
-        return prediction == null ? null : MapToDto(prediction, ticker.ToUpper());
+        return prediction == null ? null : MapToDto(prediction, upperTicker);
     }
 
     private static PredictionDto MapToDto(Prediction p, string ticker) => new()
