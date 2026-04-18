@@ -101,6 +101,44 @@ jobs:
       - run: dotnet test tests/backend/StockPredictor.Tests.Unit/ --verbosity minimal
 
   # -----------------------------------------------------------
+  # ML pytest — gate ML deployment on green tests.
+  # -----------------------------------------------------------
+  ml-test:
+    needs: [changes, ml-lint]
+    if: needs.changes.outputs.ml == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: src/ml/requirements.txt
+      - run: pip install -r src/ml/requirements.txt
+      - run: pip install pytest httpx
+      - run: python -m pytest tests/ml -v
+
+  # -----------------------------------------------------------
+  # Frontend Vitest — gate frontend deployment on green tests.
+  # -----------------------------------------------------------
+  frontend-test:
+    needs: [changes, frontend-lint]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  # -----------------------------------------------------------
   # Build + push + deploy each service. Only runs on push to
   # main; PR triggers stop at the quality-gate jobs above.
   # -----------------------------------------------------------
@@ -136,7 +174,7 @@ jobs:
             --image ${{ env.IMAGE_PREFIX }}-backend:sha-${{ github.sha }}
 
   ml:
-    needs: [changes, ml-lint]
+    needs: [changes, ml-lint, ml-test]
     if: github.event_name == 'push' && needs.changes.outputs.ml == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -167,7 +205,7 @@ jobs:
             --image ${{ env.IMAGE_PREFIX }}-ml:sha-${{ github.sha }}
 
   frontend:
-    needs: [changes, frontend-lint]
+    needs: [changes, frontend-lint, frontend-test]
     if: github.event_name == 'push' && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
