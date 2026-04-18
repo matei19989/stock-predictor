@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router';
+import { ArrowLeft, EnvelopeSimple, LockKey } from '@phosphor-icons/react';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -52,58 +53,76 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  if (submitted) {
-    return (
-      <div className="w-full max-w-md space-y-6 text-center">
-        <h1 className="font-heading text-2xl font-bold">Check your email</h1>
-        <p className="text-sm text-gray-400 leading-relaxed">
-          If an account exists with that email, we&apos;ve sent a password reset link.
-          The link expires in 1 hour.
-        </p>
-        <Link to="/login" className="inline-block text-sm text-purple-400 hover:text-purple-300">
-          ← Back to login
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full max-w-md space-y-6">
-      <div className="space-y-2">
-        <h1 className="font-heading text-2xl font-bold tracking-[-0.03em]">Reset your password</h1>
-        <p className="text-sm text-gray-500">
-          Enter your email and we&apos;ll send you a link to set a new password.
-        </p>
-      </div>
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[#07080d] px-6">
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-purple-600/[0.07] rounded-full blur-[140px] pointer-events-none" />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs uppercase tracking-[0.1em] text-gray-400">
-            Email
-          </Label>
-          <input
-            id="email"
-            type="email"
-            {...register('email')}
-            className="glass-input w-full rounded-xl px-4 py-3 text-sm text-white outline-none"
-          />
-          {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
-        </div>
+      <div className="relative z-10 w-full max-w-[420px] text-center space-y-8 animate-slide-up">
+        {submitted ? (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10 border border-purple-500/20">
+              <EnvelopeSimple weight="duotone" size={32} className="text-purple-400" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="font-heading text-3xl font-bold tracking-[-0.03em] bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                Check your email
+              </h1>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                If an account exists with that email, we&apos;ve sent a password reset link.
+                <br />
+                The link expires in 1 hour.
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10 border border-purple-500/20">
+              <LockKey weight="duotone" size={32} className="text-purple-400" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="font-heading text-3xl font-bold tracking-[-0.03em] bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                Reset your password
+              </h1>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Enter your email and we&apos;ll send you a link to set a new password.
+              </p>
+            </div>
 
-        <div ref={turnstileRef} />
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-left">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-300">
+                  Email
+                </Label>
+                <input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                  className="glass-input w-full rounded-lg px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none"
+                />
+                {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+              </div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting || !turnstileReady || !turnstileToken}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white h-10 rounded-xl disabled:opacity-40"
+              <div ref={turnstileRef} />
+
+              <Button
+                type="submit"
+                disabled={isSubmitting || !turnstileReady || !turnstileToken}
+                className="w-full h-11 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 font-medium rounded-lg shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:shadow-[0_0_50px_rgba(168,85,247,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] disabled:opacity-40"
+              >
+                {isSubmitting ? 'Sending…' : 'Send reset link'}
+              </Button>
+            </form>
+          </>
+        )}
+
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-purple-400 transition-colors duration-300"
         >
-          {isSubmitting ? 'Sending\u2026' : 'Send reset link'}
-        </Button>
-
-        <Link to="/login" className="block text-center text-xs text-gray-500 hover:text-gray-300">
-          ← Back to login
+          <ArrowLeft weight="bold" size={14} />
+          Back to sign in
         </Link>
-      </form>
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default function AllStocksPage() {
         </span>
         <h1 className="font-heading text-3xl font-bold tracking-[-0.03em]">All Stocks</h1>
         <p className="text-sm text-gray-500 leading-relaxed">
-          Browse all {stocks.length} S&P 500 stocks in our universe
+          Browse all S&P 500 stocks
         </p>
       </div>
 
