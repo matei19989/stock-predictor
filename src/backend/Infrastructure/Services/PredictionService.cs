@@ -74,6 +74,32 @@ public class PredictionService : IPredictionService
         return MapToDto(prediction, ticker);
     }
 
+    public async Task<List<UserPredictionDto>> GetUserPredictedAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var logs = await _userLogs.GetAllForUserAsync(userId, cancellationToken);
+        var result = new List<UserPredictionDto>(capacity: logs.Count);
+
+        foreach (var log in logs)
+        {
+            var cache = await _predictions.GetLatestAsync(log.StockId, log.Horizon, cancellationToken);
+            var isExpired = cache == null || cache.ExpiresAt < DateTime.UtcNow;
+
+            result.Add(new UserPredictionDto
+            {
+                Ticker = log.Stock.Ticker,
+                Name = log.Stock.Name,
+                Horizon = log.Horizon.ToWireString(),
+                Signal = isExpired ? null : cache!.Signal.ToWireString(),
+                Confidence = isExpired ? null : cache!.Confidence,
+                PredictedAt = log.RequestedAt,
+                ExpiresAt = isExpired ? null : cache!.ExpiresAt,
+                IsExpired = isExpired,
+            });
+        }
+
+        return result;
+    }
+
     public async Task<PredictionDto?> GetLatestForUserAsync(Guid userId, string ticker, string horizon, CancellationToken cancellationToken = default)
     {
         var horizonEnum = HorizonExtensions.ParseHorizon(horizon);

@@ -156,4 +156,58 @@ public class PredictionServiceTests
             r => r.GetLatestAsync(It.IsAny<Guid>(), Horizon.SixMonths, It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task GetUserPredictedAsync_ReturnsRowPerLog_WithCacheWhenValid()
+    {
+        var userId = Guid.NewGuid();
+        var aapl = new Stock { Id = Guid.NewGuid(), Ticker = "AAPL", Name = "Apple" };
+        var msft = new Stock { Id = Guid.NewGuid(), Ticker = "MSFT", Name = "Microsoft" };
+
+        var logs = new List<UserPredictionLog>
+        {
+            new() { UserId = userId, StockId = aapl.Id, Horizon = Horizon.ThreeMonths, RequestedAt = DateTime.UtcNow.AddMinutes(-10), Stock = aapl },
+            new() { UserId = userId, StockId = msft.Id, Horizon = Horizon.SixMonths,   RequestedAt = DateTime.UtcNow.AddMinutes(-5),  Stock = msft },
+        };
+        _userLogRepo.Setup(r => r.GetAllForUserAsync(userId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(logs);
+
+        _predictions.Setup(r => r.GetLatestAsync(aapl.Id, Horizon.ThreeMonths, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new Prediction
+                    {
+                        StockId = aapl.Id, Horizon = Horizon.ThreeMonths,
+                        Signal = TradingSignal.Buy, Confidence = 0.5,
+                        ExpiresAt = DateTime.UtcNow.AddHours(20),
+                    });
+        _predictions.Setup(r => r.GetLatestAsync(msft.Id, Horizon.SixMonths, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((Prediction?)null);
+
+        var result = await _sut.GetUserPredictedAsync(userId);
+
+        result.Should().HaveCount(2);
+        result[0].Ticker.Should().Be("AAPL");
+        result[0].Horizon.Should().Be("3m");
+        result[0].Signal.Should().Be("Buy");
+        result[0].IsExpired.Should().BeFalse();
+
+        result[1].Ticker.Should().Be("MSFT");
+        result[1].Horizon.Should().Be("6m");
+        result[1].Signal.Should().BeNull();
+        result[1].IsExpired.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUserPredictedAsync_ReturnsEmpty_WhenUserHasNoLogs()
+    {
+        var userId = Guid.NewGuid();
+        _userLogRepo.Setup(r => r.GetAllForUserAsync(userId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new List<UserPredictionLog>());
+
+        var result = await _sut.GetUserPredictedAsync(userId);
+
+        result.Should().BeEmpty();
+        _predictions.Verify(
+            r => r.GetLatestAsync(It.IsAny<Guid>(), It.IsAny<Horizon>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
