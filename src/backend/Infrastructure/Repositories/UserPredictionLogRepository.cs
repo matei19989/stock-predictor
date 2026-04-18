@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StockPredictor.Application.Interfaces.Repositories;
 using StockPredictor.Domain.Entities;
+using StockPredictor.Domain.Enums;
 using StockPredictor.Infrastructure.Persistence;
 
 namespace StockPredictor.Infrastructure.Repositories;
@@ -14,6 +15,10 @@ public class UserPredictionLogRepository : IUserPredictionLogRepository
     public Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _db.UserPredictionLogs
            .CountAsync(p => p.UserId == userId, cancellationToken);
+
+    public Task<bool> ExistsAsync(Guid userId, Guid stockId, Horizon horizon, CancellationToken ct = default) =>
+        _db.UserPredictionLogs
+           .AnyAsync(p => p.UserId == userId && p.StockId == stockId && p.Horizon == horizon, ct);
 
     public async Task UpsertAsync(UserPredictionLog entry, CancellationToken cancellationToken = default)
     {
@@ -31,4 +36,12 @@ public class UserPredictionLogRepository : IUserPredictionLogRepository
 
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<List<UserPredictionLog>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _db.UserPredictionLogs
+           .AsNoTracking()
+           .Include(p => p.Stock)
+           .Where(p => p.UserId == userId)
+           .OrderByDescending(p => p.RequestedAt)
+           .ToListAsync(cancellationToken);
 }

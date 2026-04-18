@@ -76,7 +76,7 @@ public class PredictionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLatest(string ticker, [FromQuery] string horizon = "3m", CancellationToken cancellationToken = default)
     {
-        var result = await _predictions.GetLatestAsync(ticker.ToUpper(), horizon, cancellationToken);
+        var result = await _predictions.GetLatestForUserAsync(GetUserId(), ticker.ToUpper(), horizon, cancellationToken);
         return result == null ? NotFound() : Ok(result);
     }
 
@@ -86,5 +86,13 @@ public class PredictionsController : ControllerBase
     {
         var count = await _predictionLog.CountByUserAsync(GetUserId(), cancellationToken);
         return Ok(new { count });
+    }
+
+    [HttpGet("user/predicted")]
+    [ProducesResponseType(typeof(IEnumerable<UserPredictionDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUserPredicted(CancellationToken cancellationToken)
+    {
+        var result = await _predictions.GetUserPredictedAsync(GetUserId(), cancellationToken);
+        return Ok(result);
     }
 }

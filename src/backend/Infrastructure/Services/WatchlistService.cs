@@ -16,6 +16,7 @@ public class WatchlistService : IWatchlistService
     private readonly IStockPriceRepository _prices;
     private readonly IPredictionRepository _predictions;
     private readonly IStockService _stockService;
+    private readonly IUserPredictionLogRepository _userLogs;
     private readonly ILogger<WatchlistService> _logger;
 
     public WatchlistService(
@@ -24,6 +25,7 @@ public class WatchlistService : IWatchlistService
         IStockPriceRepository prices,
         IPredictionRepository predictions,
         IStockService stockService,
+        IUserPredictionLogRepository userLogs,
         ILogger<WatchlistService> logger)
     {
         _watchlist = watchlist;
@@ -31,6 +33,7 @@ public class WatchlistService : IWatchlistService
         _prices = prices;
         _predictions = predictions;
         _stockService = stockService;
+        _userLogs = userLogs;
         _logger = logger;
     }
 
@@ -43,6 +46,13 @@ public class WatchlistService : IWatchlistService
         var pricesByStock = await _prices.GetLastNForStocksAsync(stockIds, 2, cancellationToken);
         var predictionsByStock = await _predictions.GetValidForStocksAsync(stockIds, Horizon.ThreeMonths, cancellationToken);
 
+        var userPredictedStockIds = new HashSet<Guid>();
+        foreach (var stockId in stockIds)
+        {
+            if (await _userLogs.ExistsAsync(userId, stockId, Horizon.ThreeMonths, cancellationToken))
+                userPredictedStockIds.Add(stockId);
+        }
+
         return items.Select(item =>
         {
             var lastTwo = pricesByStock.GetValueOrDefault(item.StockId) ?? [];
@@ -53,7 +63,9 @@ public class WatchlistService : IWatchlistService
             if (latest != null && previous != null && previous.Close != 0)
                 change1dPct = (latest.Close - previous.Close) / previous.Close * 100;
 
-            predictionsByStock.TryGetValue(item.StockId, out var prediction);
+            var prediction = userPredictedStockIds.Contains(item.StockId)
+                ? predictionsByStock.GetValueOrDefault(item.StockId)
+                : null;
 
             return new WatchlistItemDto
             {
