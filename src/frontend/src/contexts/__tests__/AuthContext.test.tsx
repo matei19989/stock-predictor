@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { render, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
@@ -30,7 +31,10 @@ type Ctx = ReturnType<typeof useAuthContext>;
 let ctxRef: Ctx | null = null;
 
 function CaptureCtx() {
-  ctxRef = useAuthContext();
+  const ctx = useAuthContext();
+  useEffect(() => {
+    ctxRef = ctx;
+  });
   return null;
 }
 
