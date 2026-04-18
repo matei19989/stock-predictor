@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Link, useNavigate } from 'react-router';
 import { ArrowRight } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';

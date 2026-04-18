@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { notifySuccess } from '@/utils/notify';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import * as predictionService from '@/services/predictionService';

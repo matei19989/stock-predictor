@@ -1,7 +1,6 @@
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 /** Wraps toast.success — suppressed when user disables notifications in Settings. */
 export function notifySuccess(message: string) {
-  if (localStorage.getItem('sp_notifications') === 'false') return;
   toast.success(message);
 }

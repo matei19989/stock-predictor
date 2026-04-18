@@ -122,7 +122,7 @@ export default function AllStocksPage() {
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map(stock => (
+          {[...filtered].sort((a, b) => a.ticker.localeCompare(b.ticker)).map(stock => (
             <StockCard key={stock.ticker} stock={stock} />
           ))}
         </div>
