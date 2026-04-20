@@ -22,19 +22,18 @@ public class UserPredictionLogRepository : IUserPredictionLogRepository
 
     public async Task UpsertAsync(UserPredictionLog entry, CancellationToken cancellationToken = default)
     {
-        var existing = await _db.UserPredictionLogs
-            .FirstOrDefaultAsync(p => p.UserId == entry.UserId && p.StockId == entry.StockId && p.Horizon == entry.Horizon, cancellationToken);
-
-        if (existing != null)
-        {
-            existing.RequestedAt = entry.RequestedAt;
-        }
-        else
-        {
-            await _db.UserPredictionLogs.AddAsync(entry, cancellationToken);
-        }
-
-        await _db.SaveChangesAsync(cancellationToken);
+        // Atomic upsert via Postgres ON CONFLICT — prevents the find-then-insert
+        // race where two concurrent requests for the same (UserId, StockId, Horizon)
+        // would both see a null read and both try to insert, surfacing a
+        // duplicate-key 500 from the unique index.
+        await _db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             INSERT INTO "UserPredictionLogs" ("Id", "UserId", "StockId", "Horizon", "RequestedAt")
+             VALUES ({entry.Id}, {entry.UserId}, {entry.StockId}, {(int)entry.Horizon}, {entry.RequestedAt})
+             ON CONFLICT ("UserId", "StockId", "Horizon")
+             DO UPDATE SET "RequestedAt" = EXCLUDED."RequestedAt"
+             """,
+            cancellationToken);
     }
 
     public Task<List<UserPredictionLog>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
