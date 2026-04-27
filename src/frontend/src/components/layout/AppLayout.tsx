@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router';
 import { WatchlistProvider } from '@/contexts/WatchlistContext';
+import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -8,6 +9,7 @@ export default function AppLayout() {
   const location = useLocation();
   return (
     <WatchlistProvider>
+      <RecentlyViewedProvider>
       <div className="relative flex h-screen flex-col overflow-hidden bg-[#07080d]">
         {/* Ambient background glows */}
         <div className="pointer-events-none fixed inset-0 z-0">
@@ -36,6 +38,7 @@ export default function AppLayout() {
           </main>
         </div>
       </div>
+      </RecentlyViewedProvider>
     </WatchlistProvider>
   );
 }
