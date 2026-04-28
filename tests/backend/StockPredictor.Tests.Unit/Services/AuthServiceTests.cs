@@ -82,10 +82,15 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_DuplicateEmail_ThrowsConflictException()
+    public async Task RegisterAsync_ExistingConfirmedEmail_ThrowsConflictException()
     {
         var sut = CreateSut();
-        _users.Setup(r => r.EmailExistsAsync("taken@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var confirmed = new User
+        {
+            Id = Guid.NewGuid(), Username = "owner", Email = "taken@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow, IsEmailConfirmed = true
+        };
+        _users.Setup(r => r.GetByEmailAsync("taken@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(confirmed);
 
         await sut.Invoking(s => s.RegisterAsync(new RegisterRequest
             {
@@ -94,14 +99,76 @@ public class AuthServiceTests
                 Password = "password123"
             }))
             .Should().ThrowAsync<ConflictException>()
-            .WithMessage("*email*");
+            .WithMessage("*email*already*exists*");
+
+        _users.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ExistingUnconfirmedPendingEmail_ThrowsFriendlyConflict()
+    {
+        var sut = CreateSut(email: _email.Object);
+        var pending = new User
+        {
+            Id = Guid.NewGuid(), Username = "ghost", Email = "pending@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow,
+            IsEmailConfirmed = false,
+            EmailConfirmationToken = "still-valid",
+            EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddMinutes(30)
+        };
+        _users.Setup(r => r.GetByEmailAsync("pending@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(pending);
+
+        await sut.Invoking(s => s.RegisterAsync(new RegisterRequest
+            {
+                Username = "alice",
+                Email = "pending@example.com",
+                Password = "password123"
+            }))
+            .Should().ThrowAsync<ConflictException>()
+            .WithMessage("*pending confirmation*");
+
+        _users.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ExistingExpiredUnconfirmedEmail_DeletesAndRegistersFresh()
+    {
+        var sut = CreateSut(email: _email.Object);
+        var abandoned = new User
+        {
+            Id = Guid.NewGuid(), Username = "old-username", Email = "reuse@example.com",
+            PasswordHash = "hash", CreatedAt = DateTime.UtcNow.AddDays(-1),
+            IsEmailConfirmed = false,
+            EmailConfirmationToken = "expired",
+            EmailConfirmationTokenExpiresAt = DateTime.UtcNow.AddHours(-2)
+        };
+        _users.Setup(r => r.GetByEmailAsync("reuse@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(abandoned);
+        _users.Setup(r => r.DeleteAsync(abandoned, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _users.Setup(r => r.UsernameExistsAsync("alice", It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _users.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _watchlist.Setup(w => w.SeedDefaultsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _email.Setup(e => e.SendConfirmationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var result = await sut.RegisterAsync(new RegisterRequest
+        {
+            Username = "alice",
+            Email = "reuse@example.com",
+            Password = "password123"
+        });
+
+        result.Should().BeOfType<RegisterPendingResponse>();
+        _users.Verify(r => r.DeleteAsync(abandoned, It.IsAny<CancellationToken>()), Times.Once);
+        _users.Verify(r => r.AddAsync(It.Is<User>(u =>
+            u.Email == "reuse@example.com" && u.Username == "alice" && !u.IsEmailConfirmed),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task RegisterAsync_DuplicateUsername_ThrowsConflictException()
     {
         var sut = CreateSut();
-        _users.Setup(r => r.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _users.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
         _users.Setup(r => r.UsernameExistsAsync("alice", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         await sut.Invoking(s => s.RegisterAsync(new RegisterRequest
