@@ -37,8 +37,23 @@ public class AuthService : IAuthService
 
     public async Task<object> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
-        if (await _users.EmailExistsAsync(request.Email.ToLower(), cancellationToken))
-            throw new ConflictException("An account with this email already exists.");
+        var normalizedEmail = request.Email.ToLower();
+        var existing = await _users.GetByEmailAsync(normalizedEmail, cancellationToken);
+
+        if (existing is not null)
+        {
+            if (existing.IsEmailConfirmed)
+                throw new ConflictException("An account with this email already exists.");
+
+            var stillPending = existing.EmailConfirmationTokenExpiresAt.HasValue
+                               && existing.EmailConfirmationTokenExpiresAt.Value > DateTime.UtcNow;
+
+            if (stillPending)
+                throw new ConflictException("This email is pending confirmation. Check your inbox or request a new confirmation email.");
+
+            await _users.DeleteAsync(existing, cancellationToken);
+            _logger.LogInformation("Reaped abandoned unconfirmed registration for email {Email}", normalizedEmail);
+        }
 
         if (await _users.UsernameExistsAsync(request.Username, cancellationToken))
             throw new ConflictException("This username is already taken.");
@@ -47,7 +62,7 @@ public class AuthService : IAuthService
         {
             Id = Guid.NewGuid(),
             Username = request.Username,
-            Email = request.Email.ToLower(),
+            Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             CreatedAt = DateTime.UtcNow
         };
