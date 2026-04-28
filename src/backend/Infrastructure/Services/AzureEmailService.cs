@@ -35,11 +35,23 @@ public class AzureEmailService : IEmailService
                     Click the button below to verify your email address and activate your Grafynt account.
                     This link expires in 1 hour.
                 </p>
-                <a href="{confirmUrl}"
-                   style="display: inline-block; background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; mso-padding-alt: 0; mso-line-height-rule: exactly;">
-                    Confirm Email
-                </a>
-                <p style="font-size: 13px; line-height: 1.5; color: #888; margin-top: 32px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; margin-bottom: 24px;">
+                    <tr>
+                        <td bgcolor="#a855f7" style="background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); border-radius: 8px;">
+                            <a href="{confirmUrl}" target="_blank" rel="noopener noreferrer"
+                               style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600;">
+                                Confirm Email
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+                <p style="font-size: 13px; line-height: 1.5; color: #888; margin-bottom: 8px;">
+                    Button not working? Copy and paste this link into your browser:
+                </p>
+                <p style="font-size: 13px; line-height: 1.5; color: #555; word-break: break-all; margin-bottom: 32px;">
+                    <a href="{confirmUrl}" target="_blank" rel="noopener noreferrer" style="color: #a855f7;">{confirmUrl}</a>
+                </p>
+                <p style="font-size: 13px; line-height: 1.5; color: #888;">
                     If you didn't create an account, you can safely ignore this email.
                 </p>
             </div>
@@ -76,11 +88,23 @@ public class AzureEmailService : IEmailService
                     Someone (hopefully you) asked to reset the password on your Grafynt account.
                     Click the button below to pick a new one. This link expires in 1 hour.
                 </p>
-                <a href="{resetUrl}"
-                   style="display: inline-block; background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; mso-padding-alt: 0; mso-line-height-rule: exactly;">
-                    Reset password
-                </a>
-                <p style="font-size: 13px; line-height: 1.5; color: #888; margin-top: 32px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; margin-bottom: 24px;">
+                    <tr>
+                        <td bgcolor="#a855f7" style="background-color: #a855f7; background: linear-gradient(135deg, #a855f7, #ec4899); border-radius: 8px;">
+                            <a href="{resetUrl}" target="_blank" rel="noopener noreferrer"
+                               style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600;">
+                                Reset password
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+                <p style="font-size: 13px; line-height: 1.5; color: #888; margin-bottom: 8px;">
+                    Button not working? Copy and paste this link into your browser:
+                </p>
+                <p style="font-size: 13px; line-height: 1.5; color: #555; word-break: break-all; margin-bottom: 32px;">
+                    <a href="{resetUrl}" target="_blank" rel="noopener noreferrer" style="color: #a855f7;">{resetUrl}</a>
+                </p>
+                <p style="font-size: 13px; line-height: 1.5; color: #888;">
                     If you didn't request a password reset, you can safely ignore this email — your password won't change.
                 </p>
             </div>
