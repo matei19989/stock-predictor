@@ -40,4 +40,10 @@ public class UserRepository : IUserRepository
         _db.Users.Update(user);
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task DeleteAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
 }
