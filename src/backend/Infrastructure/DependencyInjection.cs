@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IWatchlistService, WatchlistService>();
         services.AddScoped<IPredictionService, PredictionService>();
         services.AddScoped<IUserPreferencesService, UserPreferencesService>();
+        services.AddScoped<IStockVisitService, StockVisitService>();
 
         // Email service — only registered when connection string is configured
         var emailConnectionString = configuration["Email:ConnectionString"];
