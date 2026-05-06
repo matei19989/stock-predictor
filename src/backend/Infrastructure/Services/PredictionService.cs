@@ -33,7 +33,7 @@ public class PredictionService : IPredictionService
         _logger = logger;
     }
 
-    public async Task<PredictionDto> GetOrCreateAsync(string ticker, string horizon, CancellationToken cancellationToken = default)
+    public async Task<PredictionDto> GetOrCreateAsync(Guid userId, string ticker, string horizon, CancellationToken cancellationToken = default)
     {
         var horizonEnum = HorizonExtensions.ParseHorizon(horizon);
 
@@ -49,6 +49,7 @@ public class PredictionService : IPredictionService
         if (cached != null)
         {
             _logger.LogInformation("Cache hit: returning stored prediction for {Ticker} {Horizon}", ticker, horizon);
+            await LogUserPredictionAsync(userId, stock.Id, horizonEnum, cancellationToken);
             return MapToDto(cached, ticker);
         }
 
@@ -71,7 +72,30 @@ public class PredictionService : IPredictionService
         };
 
         await _predictions.AddAsync(prediction, cancellationToken);
+        await LogUserPredictionAsync(userId, stock.Id, horizonEnum, cancellationToken);
         return MapToDto(prediction, ticker);
+    }
+
+    public Task<int> GetUserPredictionCountAsync(Guid userId, CancellationToken cancellationToken = default)
+        => _userLogs.CountByUserAsync(userId, cancellationToken);
+
+    private async Task LogUserPredictionAsync(Guid userId, Guid stockId, Horizon horizon, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _userLogs.UpsertAsync(new UserPredictionLog
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                StockId = stockId,
+                Horizon = horizon,
+                RequestedAt = DateTime.UtcNow,
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to upsert user prediction log for {UserId} {StockId} {Horizon}; prediction returned successfully", userId, stockId, horizon);
+        }
     }
 
     public async Task<List<UserPredictionDto>> GetUserPredictedAsync(Guid userId, CancellationToken cancellationToken = default)

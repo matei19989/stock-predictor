@@ -45,11 +45,15 @@ public class PredictionServiceTests
         _stocks.Setup(r => r.GetByTickerAsync("AAPL", It.IsAny<CancellationToken>())).ReturnsAsync(stock);
         _predictions.Setup(r => r.GetValidAsync(stock.Id, Horizon.ThreeMonths, It.IsAny<CancellationToken>())).ReturnsAsync(cached);
 
-        var result = await _sut.GetOrCreateAsync("AAPL", "3m");
+        var userId = Guid.NewGuid();
+        var result = await _sut.GetOrCreateAsync(userId, "AAPL", "3m");
 
         result.Signal.Should().Be("Buy");
         result.Confidence.Should().BeApproximately(0.7, 0.001);
         _ml.Verify(m => m.PredictAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userLogRepo.Verify(r => r.UpsertAsync(
+            It.Is<UserPredictionLog>(l => l.UserId == userId && l.StockId == stock.Id && l.Horizon == Horizon.ThreeMonths),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -66,12 +70,52 @@ public class PredictionServiceTests
         _ml.Setup(m => m.PredictAsync("AAPL", "3m", It.IsAny<CancellationToken>())).ReturnsAsync(mlResponse);
         _predictions.Setup(r => r.AddAsync(It.IsAny<Prediction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-        var result = await _sut.GetOrCreateAsync("AAPL", "3m");
+        var userId = Guid.NewGuid();
+        var result = await _sut.GetOrCreateAsync(userId, "AAPL", "3m");
 
         result.Signal.Should().Be("Buy");
         result.Confidence.Should().BeApproximately(0.65, 0.001);
         result.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddHours(24), TimeSpan.FromMinutes(1));
         _predictions.Verify(r => r.AddAsync(It.IsAny<Prediction>(), It.IsAny<CancellationToken>()), Times.Once);
+        _userLogRepo.Verify(r => r.UpsertAsync(
+            It.Is<UserPredictionLog>(l => l.UserId == userId && l.StockId == stock.Id && l.Horizon == Horizon.ThreeMonths),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetOrCreateAsync_StillReturnsPrediction_WhenUserLogUpsertFails()
+    {
+        var userId = Guid.NewGuid();
+        var stock = new Stock { Id = Guid.NewGuid(), Ticker = "AAPL" };
+        var cached = new Prediction
+        {
+            Id = Guid.NewGuid(), StockId = stock.Id, Horizon = Horizon.ThreeMonths,
+            Signal = TradingSignal.Buy, Confidence = 0.5,
+            Probabilities = new Dictionary<string, double> { ["Buy"] = 0.5 },
+            FeaturesUsed = 22, LowConfidence = false,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-1), ExpiresAt = DateTime.UtcNow.AddHours(23),
+        };
+
+        _stocks.Setup(r => r.GetByTickerAsync("AAPL", It.IsAny<CancellationToken>())).ReturnsAsync(stock);
+        _predictions.Setup(r => r.GetValidAsync(stock.Id, Horizon.ThreeMonths, It.IsAny<CancellationToken>())).ReturnsAsync(cached);
+        _userLogRepo.Setup(r => r.UpsertAsync(It.IsAny<UserPredictionLog>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new InvalidOperationException("transient db failure"));
+
+        var result = await _sut.GetOrCreateAsync(userId, "AAPL", "3m");
+
+        result.Should().NotBeNull();
+        result.Signal.Should().Be("Buy");
+    }
+
+    [Fact]
+    public async Task GetUserPredictionCountAsync_DelegatesToRepository()
+    {
+        var userId = Guid.NewGuid();
+        _userLogRepo.Setup(r => r.CountByUserAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync(7);
+
+        var count = await _sut.GetUserPredictionCountAsync(userId);
+
+        count.Should().Be(7);
     }
 
     [Fact]
@@ -79,7 +123,7 @@ public class PredictionServiceTests
     {
         _stocks.Setup(r => r.GetByTickerAsync("UNKNOWN", It.IsAny<CancellationToken>())).ReturnsAsync((Stock?)null);
 
-        await _sut.Invoking(s => s.GetOrCreateAsync("UNKNOWN", "3m"))
+        await _sut.Invoking(s => s.GetOrCreateAsync(Guid.NewGuid(), "UNKNOWN", "3m"))
                   .Should().ThrowAsync<NotFoundException>();
     }
 
