@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockPredictor.Application.DTOs.Stocks;
 using StockPredictor.Application.Exceptions;
-using StockPredictor.Application.Interfaces.Repositories;
 using StockPredictor.Application.Interfaces.Services;
-using StockPredictor.Domain.Entities;
 
 namespace StockPredictor.API.Controllers;
 
@@ -15,13 +13,11 @@ namespace StockPredictor.API.Controllers;
 public class StocksController : ControllerBase
 {
     private readonly IStockService _stocks;
-    private readonly IStockRepository _stockRepo;
-    private readonly IStockVisitRepository _visits;
+    private readonly IStockVisitService _visits;
 
-    public StocksController(IStockService stocks, IStockRepository stockRepo, IStockVisitRepository visits)
+    public StocksController(IStockService stocks, IStockVisitService visits)
     {
         _stocks = stocks;
-        _stockRepo = stockRepo;
         _visits = visits;
     }
 
@@ -59,29 +55,15 @@ public class StocksController : ControllerBase
 
     [HttpPost("{ticker}/visit")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RecordVisit(string ticker, CancellationToken cancellationToken)
     {
-        var stock = await _stockRepo.GetByTickerAsync(ticker.ToUpper(), cancellationToken);
-        if (stock == null) return NotFound();
-
-        await _visits.UpsertAsync(new StockVisit
-        {
-            Id = Guid.NewGuid(),
-            UserId = GetUserId(),
-            StockId = stock.Id,
-            VisitedAt = DateTime.UtcNow,
-        }, cancellationToken);
-
+        await _visits.RecordAsync(GetUserId(), ticker, cancellationToken);
         return NoContent();
     }
 
     [HttpGet("recently-viewed")]
     [ProducesResponseType(typeof(List<RecentlyViewedDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRecentlyViewed(CancellationToken cancellationToken)
-    {
-        var visits = await _visits.GetRecentAsync(GetUserId(), 5, cancellationToken);
-        var dtos = visits.Select(v => new RecentlyViewedDto(v.Stock.Ticker, v.Stock.Name)).ToList();
-        return Ok(dtos);
-    }
+    public async Task<IActionResult> GetRecentlyViewed(CancellationToken cancellationToken) =>
+        Ok(await _visits.GetRecentlyViewedAsync(GetUserId(), cancellationToken));
 }
